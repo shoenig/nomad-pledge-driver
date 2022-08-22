@@ -63,17 +63,14 @@ func New(log hclog.Logger) drivers.DriverPlugin {
 }
 
 func (p *PledgeDriver) PluginInfo() (*base.PluginInfoResponse, error) {
-	p.logger.Trace("PluginInfo return it")
 	return info, nil
 }
 
 func (p *PledgeDriver) ConfigSchema() (*hclspec.Spec, error) {
-	p.logger.Trace("ConfigSchema return it")
 	return driverConfigSpec, nil
 }
 
 func (p *PledgeDriver) SetConfig(c *base.Config) error {
-	p.logger.Trace("SetConfig enter")
 	var config Config
 	if len(c.PluginConfig) > 0 {
 		if err := base.MsgPackDecode(c.PluginConfig, &config); err != nil {
@@ -90,25 +87,21 @@ func (p *PledgeDriver) SetConfig(c *base.Config) error {
 }
 
 func (p *PledgeDriver) TaskConfigSchema() (*hclspec.Spec, error) {
-	p.logger.Trace("TaskConfigSchema return it")
 	return taskConfigSpec, nil
 
 }
 
 func (p *PledgeDriver) Capabilities() (*drivers.Capabilities, error) {
-	p.logger.Trace("Capabilities return it")
 	return capabilities, nil
 }
 
 func (p *PledgeDriver) Fingerprint(ctx context.Context) (<-chan *drivers.Fingerprint, error) {
-	p.logger.Trace("Fingerprint")
 	ch := make(chan *drivers.Fingerprint)
 	go p.fingerprint(ctx, ch)
 	return ch, nil
 }
 
 func (p *PledgeDriver) fingerprint(ctx context.Context, ch chan<- *drivers.Fingerprint) {
-	p.logger.Trace("fingerprint")
 	defer close(ch)
 
 	var timer, cancel = libtime.SafeTimer(0)
@@ -202,7 +195,6 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		return nil, nil, fmt.Errorf("task with ID %s already started", config.ID)
 	}
 
-	p.logger.Trace("will decode driver config")
 	var taskConfig TaskConfig
 	if err := config.DecodeDriverConfig(&taskConfig); err != nil {
 		p.logger.Error("failed to decode driver config", "error", err)
@@ -212,7 +204,6 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 	handle := drivers.NewTaskHandle(HandleVersion)
 	handle.Config = config
 
-	p.logger.Trace("task io", "out", config.StdoutPath, "err", config.StderrPath)
 	stdout, stderr, err := open(config.StdoutPath, config.StderrPath)
 	if err != nil {
 		p.logger.Error("failed to open log files", "error", err)
@@ -247,7 +238,6 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		StartedAt:  started,
 	}
 
-	p.logger.Trace("handle will set driver state")
 	if err = handle.SetDriverState(state); err != nil {
 		return nil, nil, fmt.Errorf("failed to set driver state: %w", err)
 	}
