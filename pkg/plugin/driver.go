@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -80,8 +81,6 @@ func (p *PledgeDriver) SetConfig(c *base.Config) error {
 		}
 	}
 
-	// validate the plugin configuration
-
 	p.config = &config
 	if p.config.PledgeExecutable == "" {
 		return fmt.Errorf("pledge_executable must be set")
@@ -151,6 +150,12 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 		}
 	}
 
+	promise := p.detect("pledge")
+	if !promise {
+		healthState = drivers.HealthStateUnhealthy
+		healthDescription = "kernel too old"
+	}
+
 	unveil := p.detect("unveil")
 	if !unveil {
 		healthState = drivers.HealthStateUnhealthy
@@ -169,7 +174,7 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 }
 
 func (p *PledgeDriver) detect(param string) bool {
-	cmd := exec.Command("/bin/sh", "-c", p.config.PledgeExecutable, "-T", param)
+	cmd := exec.Command("/bin/sh", "-c", strings.Join([]string{p.config.PledgeExecutable, "-T", param}, " "))
 	_ = cmd.Run() // just check the exit code, non-zero means undetected
 	return cmd.ProcessState.ExitCode() == 0
 }
