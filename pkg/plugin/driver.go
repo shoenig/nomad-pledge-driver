@@ -129,7 +129,8 @@ func (p *PledgeDriver) fingerprint(ctx context.Context, ch chan<- *drivers.Finge
 }
 
 func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
-	p.logger.Trace("doFingerprint")
+	healthState := drivers.HealthStateHealthy
+	healthDescription := drivers.DriverHealthy
 
 	abs, err := filepath.Abs(p.config.PledgeExecutable)
 	if err != nil {
@@ -139,9 +140,21 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 		}
 	}
 
+	if _, err = os.Stat(abs); err != nil {
+		if os.IsNotExist(err) {
+			healthState = drivers.HealthStateUndetected
+			healthDescription = "pledge executable not found"
+		} else {
+			healthState = drivers.HealthStateUnhealthy
+			healthDescription = "failed to stat pledge executable"
+		}
+	}
+
+	// detect unveil support
+
 	return &drivers.Fingerprint{
-		Health:            drivers.HealthStateHealthy,
-		HealthDescription: drivers.DriverHealthy,
+		Health:            healthState,
+		HealthDescription: healthDescription,
 		Attributes: map[string]*structs.Attribute{
 			"driver.pledge.abs": structs.NewStringAttribute(abs),
 			"driver.pledge.os":  structs.NewStringAttribute(runtime.GOOS),
