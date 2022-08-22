@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -150,16 +151,27 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 		}
 	}
 
-	// detect unveil support
+	unveil := p.detect("unveil")
+	if !unveil {
+		healthState = drivers.HealthStateUnhealthy
+		healthDescription = "kernel too old"
+	}
 
 	return &drivers.Fingerprint{
 		Health:            healthState,
 		HealthDescription: healthDescription,
 		Attributes: map[string]*structs.Attribute{
-			"driver.pledge.abs": structs.NewStringAttribute(abs),
-			"driver.pledge.os":  structs.NewStringAttribute(runtime.GOOS),
+			"driver.pledge.abs":    structs.NewStringAttribute(abs),
+			"driver.pledge.os":     structs.NewStringAttribute(runtime.GOOS),
+			"driver.pledge.unveil": structs.NewBoolAttribute(unveil),
 		},
 	}
+}
+
+func (p *PledgeDriver) detect(param string) bool {
+	cmd := exec.Command("/bin/sh", "-c", p.config.PledgeExecutable, "-T", param)
+	_ = cmd.Run() // just check the exit code, non-zero means undetected
+	return cmd.ProcessState.ExitCode() == 0
 }
 
 func open(stdout, stderr string) (io.WriteCloser, io.WriteCloser, error) {
