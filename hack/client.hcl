@@ -5,11 +5,8 @@ client {
 plugin_dir = "/home/shoenig/Work/go/pledge-d/output"
 
 plugin "pledge" {
-  # enabled = true
-
   config {
-    pledge_executable = "/opt/bin/pledge-1.6.com"
-
+    pledge_executable = "/opt/bin/pledge-1.7.com"
     #   namespace "*" {
     #     allow_pledges = "stdio rpath"
     #   }
