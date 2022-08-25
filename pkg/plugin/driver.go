@@ -306,6 +306,10 @@ func (p *PledgeDriver) WaitTask(ctx context.Context, taskID string) (<-chan *dri
 func (p *PledgeDriver) StopTask(taskID string, timeout time.Duration, signal string) error {
 	p.logger.Trace("StopTask enter", "id", taskID, "timeout", timeout, "signal", signal)
 
+	if signal == "" {
+		signal = "sigterm"
+	}
+
 	// todo: respect timeout
 
 	h, exists := p.tasks.Get(taskID)
