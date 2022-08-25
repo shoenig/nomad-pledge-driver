@@ -1,6 +1,7 @@
 package pledge
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -20,11 +22,12 @@ import (
 type Ctx = context.Context
 
 type Environment struct {
-	User string
-	Out  io.WriteCloser
-	Err  io.WriteCloser
-	Env  map[string]string
-	Dir  string
+	User   string
+	Out    io.WriteCloser
+	Err    io.WriteCloser
+	Env    map[string]string
+	Dir    string
+	Cgroup string
 }
 
 type Options struct {
@@ -59,6 +62,11 @@ type Exec interface {
 	//
 	// Must be called after Start.
 	Wait() error
+
+	//Stats returns current resource utilization.
+	//
+	// Must be called after Start.
+	Stats() Utilization
 
 	// Signal the process.
 	//
@@ -129,6 +137,24 @@ func (e *exe) PID() int {
 	return e.cmd.Process.Pid
 }
 
+func (e *exe) readCG(file string) (string, error) {
+	file = filepath.Join(e.env.Cgroup, file)
+	b, err := os.ReadFile(file)
+	return strings.TrimSpace(string(b)), err
+}
+
+func (e *exe) writeCG(file, content string) error {
+	file = filepath.Join(e.env.Cgroup, file)
+	f, err := os.OpenFile(file, os.O_WRONLY, 0700)
+	if err != nil {
+		return fmt.Errorf("failed to open cgroup file: %w", err)
+	}
+	if _, err = io.Copy(f, strings.NewReader(content)); err != nil {
+		return fmt.Errorf("failed to write pid to cgroup file: %w", err)
+	}
+	return f.Close()
+}
+
 func flatten(user, home string, env map[string]string) []string {
 	useless := set.From[string]([]string{"LS_COLORS", "XAUTHORITY", "DISPLAY", "COLORTERM", "MAIL"})
 	result := make([]string, 0, len(env))
@@ -194,7 +220,18 @@ func (e *exe) Start(ctx Ctx) error {
 		Setpgid:    true, // ignore signals sent to nomad
 		Credential: &syscall.Credential{Uid: uid, Gid: gid},
 	}
-	return e.cmd.Start()
+	if err = e.cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start command: %w", err)
+	}
+
+	// Ideally we would fork a trusted helper, enter the cgroup ourselves, then
+	// exec into the user subprocess. This is fine for now.
+	return e.isolate()
+}
+
+// isolate this process to the cgroup for this task
+func (e *exe) isolate() error {
+	return e.writeCG("cgroup.procs", strconv.Itoa(e.PID()))
 }
 
 func (e *exe) Wait() error {
@@ -212,17 +249,119 @@ func (e *exe) Signal(signal syscall.Signal) error {
 }
 
 func (e *exe) Stop(signal syscall.Signal, timeout time.Duration) error {
-	err := syscall.Kill(-e.cmd.Process.Pid, signal)
+	// politely ask the group to terminate via user specified signal
+	err := e.Signal(signal)
 	go func() {
 		timer, cancel := libtime.SafeTimer(timeout)
 		defer cancel()
 		<-timer.C
-		if !e.cmd.ProcessState.Exited() {
-			_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGKILL)
-		}
 
+		// no more mr. nice guy, kill the whole cgroup
+		_ = e.writeCG("cgroup.kill", "1")
 		_ = e.env.Out.Close()
 		_ = e.env.Err.Close()
 	}()
 	return err
 }
+
+type Utilization struct {
+	Memory uint64
+	Swap   uint64
+	Cache  uint64
+
+	System          uint64
+	User            uint64
+	Percent         uint64
+	ThrottlePeriods uint64
+	ThrottleTime    uint64
+	Ticks           uint64
+}
+
+func (e *exe) Stats() Utilization {
+	memCurrentS, _ := e.readCG("memory.current")
+	memCurrent, _ := strconv.Atoi(memCurrentS)
+
+	swapCurrentS, _ := e.readCG("memory.swap.current")
+	swapCurrent, _ := strconv.Atoi(swapCurrentS)
+
+	// todo
+	// cpuStats, _ := e.readCG("cpu.stat")
+
+	return Utilization{
+		Memory: uint64(memCurrent),
+		Swap:   uint64(swapCurrent),
+		Cache:  0, // ?
+
+		System:  0,
+		User:    0,
+		Percent: 0,
+	}
+}
+
+func extract(content string) map[string]uint64 {
+	m := make(map[string]uint64)
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		if fields := strings.Fields(scanner.Text()); len(fields) == 2 {
+			if value, err := strconv.Atoi(fields[1]); err != nil {
+				m[fields[1]] = uint64(value)
+			}
+		}
+	}
+	return m
+}
+
+/*
+    totalCPU := &drivers.CpuStats{
+		SystemMode: systemModeCPU,
+		UserMode:   userModeCPU,
+		Percent:    percent,
+		Measured:   ExecutorBasicMeasuredCpuStats,
+		TotalTicks: systemCpuStats.TicksConsumed(percent),
+	}
+
+	totalMemory := &drivers.MemoryStats{
+		RSS:      totalRSS,
+		Swap:     totalSwap,
+		Measured: ExecutorBasicMeasuredMemStats,
+	}
+
+	resourceUsage := drivers.ResourceUsage{
+		MemoryStats: totalMemory,
+		CpuStats:    totalCPU,
+	}
+	return &drivers.TaskResourceUsage{
+		ResourceUsage: &resourceUsage,
+		Timestamp:     ts,
+		Pids:          pidStats,
+	}
+
+*/
+
+/*
+cgroup/nomad.slice/18df61c6-09fb-3b35-d2bd-03c0f17a9e8b.pyserver.scope
+➜ ls
+cgroup.controllers      cpu.max.burst          hugetlb.1GB.events        io.prio.class        memory.stat
+cgroup.events           cpu.pressure           hugetlb.1GB.events.local  io.stat              memory.swap.current
+cgroup.freeze           cpuset.cpus            hugetlb.1GB.max           io.weight            memory.swap.events
+cgroup.kill             cpuset.cpus.effective  hugetlb.1GB.rsvd.current  memory.current       memory.swap.high
+cgroup.max.depth        cpuset.cpus.partition  hugetlb.1GB.rsvd.max      memory.events        memory.swap.max
+cgroup.max.descendants  cpuset.mems            hugetlb.2MB.current       memory.events.local  misc.current
+cgroup.procs            cpuset.mems.effective  hugetlb.2MB.events        memory.high          misc.max
+cgroup.stat             cpu.stat               hugetlb.2MB.events.local  memory.low           pids.current
+cgroup.subtree_control  cpu.uclamp.max         hugetlb.2MB.max           memory.max           pids.events
+cgroup.threads          cpu.uclamp.min         hugetlb.2MB.rsvd.current  memory.min           pids.max
+cgroup.type             cpu.weight             hugetlb.2MB.rsvd.max      memory.numa_stat     rdma.current
+cpu.idle                cpu.weight.nice        io.max                    memory.oom.group     rdma.max
+cpu.max                 hugetlb.1GB.current    io.pressure               memory.pressure
+
+cpu.stat)
+usage_usec 40775984
+user_usec 28691830
+system_usec 12084153
+nr_periods 0
+nr_throttled 0
+throttled_usec 0
+
+
+*/

@@ -39,6 +39,12 @@ func NewHandle(runner pledge.Exec, config *drivers.TaskConfig) (*Handle, time.Ti
 	}, now
 }
 
+func (h *Handle) Stats() pledge.Utilization {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
+	return h.runner.Stats()
+}
+
 func (h *Handle) Status() *drivers.TaskStatus {
 	h.lock.RLock()
 	defer h.lock.RUnlock()

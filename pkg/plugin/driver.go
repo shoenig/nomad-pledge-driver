@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	cstructs "github.com/hashicorp/nomad/client/structs"
 	"github.com/hashicorp/nomad/drivers/shared/eventer"
 	"github.com/hashicorp/nomad/plugins/base"
 	"github.com/hashicorp/nomad/plugins/drivers"
@@ -212,11 +213,12 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 
 	// create the environment for pledge
 	env := &pledge.Environment{
-		Out:  stdout,
-		Err:  stderr,
-		Env:  config.Env,
-		Dir:  config.TaskDir().Dir,
-		User: config.User,
+		Out:    stdout,
+		Err:    stderr,
+		Env:    config.Env,
+		Dir:    config.TaskDir().Dir,
+		User:   config.User,
+		Cgroup: fmt.Sprintf("/sys/fs/cgroup/nomad.slice/%s.%s.scope", config.AllocID, config.Name),
 	}
 
 	opts := &pledge.Options{
@@ -341,9 +343,53 @@ func (p *PledgeDriver) InspectTask(taskID string) (*drivers.TaskStatus, error) {
 func (p *PledgeDriver) TaskStats(ctx context.Context, taskID string, interval time.Duration) (<-chan *drivers.TaskResourceUsage, error) {
 	p.logger.Trace("TaskStats enter")
 
-	// todo: implement
+	h, exists := p.tasks.Get(taskID)
+	if !exists {
+		return nil, nil
+	}
+
 	ch := make(chan *drivers.TaskResourceUsage)
+	go p.stats(ctx, ch, interval, h)
 	return ch, nil
+}
+
+func (p *PledgeDriver) stats(ctx context.Context, ch chan<- *drivers.TaskResourceUsage, interval time.Duration, h *task.Handle) {
+	defer close(ch)
+	ticks, stop := libtime.SafeTimer(interval)
+	defer stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticks.C:
+			ticks.Reset(interval)
+		}
+
+		usage := h.Stats()
+
+		ch <- &drivers.TaskResourceUsage{
+			ResourceUsage: &cstructs.ResourceUsage{
+				MemoryStats: &cstructs.MemoryStats{
+					Cache:    usage.Cache,
+					Swap:     usage.Swap,
+					Usage:    usage.Memory,
+					Measured: []string{"Cache", "Swap", "Usage"},
+				},
+				CpuStats: &cstructs.CpuStats{
+					SystemMode:       0,
+					UserMode:         0,
+					TotalTicks:       0,
+					ThrottledPeriods: 0,
+					ThrottledTime:    0,
+					Percent:          0,
+					Measured:         nil,
+				},
+			},
+			Timestamp: time.Now().UTC().UnixNano(),
+			Pids:      nil,
+		}
+	}
 }
 
 func (p *PledgeDriver) TaskEvents(ctx context.Context) (<-chan *drivers.TaskEvent, error) {
