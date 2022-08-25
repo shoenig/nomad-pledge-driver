@@ -1,12 +1,11 @@
 package signals
 
 import (
-	"os"
 	"strings"
 	"syscall"
 )
 
-func From(s string) os.Signal {
+func From(s string) syscall.Signal {
 	switch strings.ToLower(s) {
 	case "sighup":
 		return syscall.SIGHUP
@@ -25,6 +24,6 @@ func From(s string) os.Signal {
 	case "sigterm":
 		return syscall.SIGTERM
 	default:
-		return syscall.SIGILL
+		return syscall.SIGABRT
 	}
 }

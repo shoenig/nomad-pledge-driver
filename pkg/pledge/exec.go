@@ -62,7 +62,12 @@ type Exec interface {
 	// Signal the process.
 	//
 	// Must be called after Start.
-	Signal(os.Signal) error
+	Signal(syscall.Signal) error
+
+	// Stop the process.
+	//
+	// Must be called after Start.
+	Stop(syscall.Signal, time.Duration) error
 
 	// Result of the process after completion.
 	//
@@ -189,12 +194,12 @@ func (e *exe) Result() (int, time.Duration) {
 	return code, elapsed
 }
 
-func (e *exe) Signal(signal os.Signal) error {
-	return e.cmd.Process.Signal(signal)
+func (e *exe) Signal(signal syscall.Signal) error {
+	return syscall.Kill(-e.cmd.Process.Pid, signal)
 }
 
-func (e *exe) Stop(timeout time.Duration) {
-	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGTERM)
+func (e *exe) Stop(signal syscall.Signal, timeout time.Duration) error {
+	err := syscall.Kill(-e.cmd.Process.Pid, signal)
 	go func() {
 		timer, cancel := libtime.SafeTimer(timeout)
 		defer cancel()
@@ -206,4 +211,5 @@ func (e *exe) Stop(timeout time.Duration) {
 		_ = e.env.Out.Close()
 		_ = e.env.Err.Close()
 	}()
+	return err
 }

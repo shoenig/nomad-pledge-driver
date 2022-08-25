@@ -305,7 +305,7 @@ func (p *PledgeDriver) StopTask(taskID string, timeout time.Duration, signal str
 	if !exists {
 		return nil
 	}
-	return h.Signal(signals.From(signal))
+	return h.Stop(signals.From(signal), timeout)
 }
 
 func (p *PledgeDriver) DestroyTask(taskID string, force bool) error {

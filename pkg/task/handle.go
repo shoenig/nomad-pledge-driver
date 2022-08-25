@@ -1,9 +1,9 @@
 package task
 
 import (
-	"os"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/hashicorp/nomad/plugins/drivers"
@@ -81,6 +81,10 @@ func (h *Handle) Block() {
 	h.result.ExitCode = code
 }
 
-func (h *Handle) Signal(signal os.Signal) error {
+func (h *Handle) Signal(signal syscall.Signal) error {
 	return h.runner.Signal(signal)
+}
+
+func (h *Handle) Stop(signal syscall.Signal, timeout time.Duration) error {
+	return h.runner.Stop(signal, timeout)
 }
