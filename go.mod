@@ -1,12 +1,12 @@
 module github.com/shoenig/nomad-pledge
 
-go 1.18
+go 1.19
 
 require (
 	github.com/hashicorp/go-hclog v1.2.2
 	github.com/hashicorp/go-set v0.1.2
 	github.com/hashicorp/nomad v1.3.3
-	github.com/shoenig/test v0.2.8
+	github.com/shoenig/test v0.3.1
 	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6
 	oss.indeed.com/go/libtime v1.6.0
 )
