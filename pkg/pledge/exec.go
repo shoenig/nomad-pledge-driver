@@ -31,10 +31,11 @@ type Options struct {
 	Command   string
 	Arguments []string
 	Pledges   string
+	Unveil    []string
 }
 
 func (o *Options) String() string {
-	return fmt.Sprintf("(%s, %v, %v)", o.Command, o.Arguments, o.Pledges)
+	return fmt.Sprintf("(%s, %v, %v, %v)", o.Command, o.Arguments, o.Pledges, o.Unveil)
 }
 
 func New(bin string, env *Environment, opts *Options) Exec {
@@ -149,14 +150,26 @@ func flatten(user, home string, env map[string]string) []string {
 }
 
 func (e *exe) parameters() string {
+	// start with the pledge executable
 	result := []string{e.bin}
+
+	// append the list of pledges
 	if e.opts.Pledges != "" {
 		result = append(result, "-p", "'"+e.opts.Pledges+"'")
 	}
+
+	// append the list of unveils
+	for _, u := range e.opts.Unveil {
+		result = append(result, "-v", "'"+u+"'")
+	}
+
+	// append the user command
 	result = append(result, e.opts.Command)
 	if len(e.opts.Arguments) > 0 {
 		result = append(result, e.opts.Arguments...)
 	}
+
+	// craft complete result
 	return strings.Join(result, " ")
 }
 

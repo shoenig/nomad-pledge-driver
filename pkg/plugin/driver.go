@@ -223,8 +223,15 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		Command:   taskConfig.Command,
 		Arguments: taskConfig.Args,
 		Pledges:   taskConfig.Pledges,
+		Unveil:    taskConfig.Unveil,
 	}
-	p.logger.Trace("pledge runner", "cmd", opts.Command, "args", opts.Arguments, "pledges", opts.Pledges)
+	p.logger.Trace(
+		"pledge runner",
+		"cmd", opts.Command,
+		"args", opts.Arguments,
+		"pledges", opts.Pledges,
+		"unveil", opts.Unveil,
+	)
 
 	runner := pledge.New(p.config.PledgeExecutable, env, opts)
 	if err = runner.Start(p.ctx); err != nil {
