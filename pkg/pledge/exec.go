@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-set"
+	"github.com/shoenig/nomad-pledge/pkg/resources"
 	"oss.indeed.com/go/libtime"
 )
 
@@ -46,6 +47,7 @@ func New(bin string, env *Environment, opts *Options) Exec {
 		bin:  bin,
 		env:  env,
 		opts: opts,
+		cpu:  new(resources.TrackCPU),
 	}
 }
 
@@ -66,7 +68,7 @@ type Exec interface {
 	//Stats returns current resource utilization.
 	//
 	// Must be called after Start.
-	Stats() Utilization
+	Stats() resources.Utilization
 
 	// Signal the process.
 	//
@@ -90,6 +92,7 @@ type exe struct {
 	opts *Options
 
 	cmd *exec.Cmd
+	cpu *resources.TrackCPU
 }
 
 // lookup returns the uid, gid, and home directory of the given user.
@@ -250,6 +253,10 @@ func (e *exe) Signal(signal syscall.Signal) error {
 
 func (e *exe) Stop(signal syscall.Signal, timeout time.Duration) error {
 	// politely ask the group to terminate via user specified signal
+
+	// todo this should block until entire cgroup is toast, which we
+	//  could check via an empty cgroup.procs
+
 	err := e.Signal(signal)
 	go func() {
 		timer, cancel := libtime.SafeTimer(timeout)
@@ -264,104 +271,52 @@ func (e *exe) Stop(signal syscall.Signal, timeout time.Duration) error {
 	return err
 }
 
-type Utilization struct {
-	Memory uint64
-	Swap   uint64
-	Cache  uint64
-
-	System          uint64
-	User            uint64
-	Percent         uint64
-	ThrottlePeriods uint64
-	ThrottleTime    uint64
-	Ticks           uint64
-}
-
-func (e *exe) Stats() Utilization {
+func (e *exe) Stats() resources.Utilization {
 	memCurrentS, _ := e.readCG("memory.current")
 	memCurrent, _ := strconv.Atoi(memCurrentS)
 
 	swapCurrentS, _ := e.readCG("memory.swap.current")
 	swapCurrent, _ := strconv.Atoi(swapCurrentS)
 
-	// todo
-	// cpuStats, _ := e.readCG("cpu.stat")
+	memStatS, _ := e.readCG("memory.stat")
+	memCache := extract(memStatS)["file"]
 
-	return Utilization{
+	cpuStatsS, _ := e.readCG("cpu.stat")
+	cpuStatsM := extract(cpuStatsS)
+
+	userUsec := cpuStatsM["user_usec"]
+	systemUsec := cpuStatsM["system_usec"]
+	totalUsec := cpuStatsM["usage_usec"]
+	userPct, systemPct, totalPct := e.cpu.Percent(userUsec, systemUsec, totalUsec)
+
+	specs, _ := resources.Get()
+	ticks := (.01 * totalPct) * float64(specs.Ticks()/specs.Cores)
+
+	return resources.Utilization{
 		Memory: uint64(memCurrent),
 		Swap:   uint64(swapCurrent),
-		Cache:  0, // ?
+		Cache:  memCache,
 
-		System:  0,
-		User:    0,
-		Percent: 0,
+		System:  userPct,
+		User:    systemPct,
+		Percent: totalPct,
+		Ticks:   ticks,
 	}
 }
 
+// todo just regex the fields we want
+// todo also get the throttle timings
 func extract(content string) map[string]uint64 {
 	m := make(map[string]uint64)
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	for scanner.Scan() {
-		if fields := strings.Fields(scanner.Text()); len(fields) == 2 {
-			if value, err := strconv.Atoi(fields[1]); err != nil {
-				m[fields[1]] = uint64(value)
+		text := scanner.Text()
+		fields := strings.Fields(text)
+		if len(fields) == 2 {
+			if value, err := strconv.Atoi(fields[1]); err == nil {
+				m[fields[0]] = uint64(value)
 			}
 		}
 	}
 	return m
 }
-
-/*
-    totalCPU := &drivers.CpuStats{
-		SystemMode: systemModeCPU,
-		UserMode:   userModeCPU,
-		Percent:    percent,
-		Measured:   ExecutorBasicMeasuredCpuStats,
-		TotalTicks: systemCpuStats.TicksConsumed(percent),
-	}
-
-	totalMemory := &drivers.MemoryStats{
-		RSS:      totalRSS,
-		Swap:     totalSwap,
-		Measured: ExecutorBasicMeasuredMemStats,
-	}
-
-	resourceUsage := drivers.ResourceUsage{
-		MemoryStats: totalMemory,
-		CpuStats:    totalCPU,
-	}
-	return &drivers.TaskResourceUsage{
-		ResourceUsage: &resourceUsage,
-		Timestamp:     ts,
-		Pids:          pidStats,
-	}
-
-*/
-
-/*
-cgroup/nomad.slice/18df61c6-09fb-3b35-d2bd-03c0f17a9e8b.pyserver.scope
-➜ ls
-cgroup.controllers      cpu.max.burst          hugetlb.1GB.events        io.prio.class        memory.stat
-cgroup.events           cpu.pressure           hugetlb.1GB.events.local  io.stat              memory.swap.current
-cgroup.freeze           cpuset.cpus            hugetlb.1GB.max           io.weight            memory.swap.events
-cgroup.kill             cpuset.cpus.effective  hugetlb.1GB.rsvd.current  memory.current       memory.swap.high
-cgroup.max.depth        cpuset.cpus.partition  hugetlb.1GB.rsvd.max      memory.events        memory.swap.max
-cgroup.max.descendants  cpuset.mems            hugetlb.2MB.current       memory.events.local  misc.current
-cgroup.procs            cpuset.mems.effective  hugetlb.2MB.events        memory.high          misc.max
-cgroup.stat             cpu.stat               hugetlb.2MB.events.local  memory.low           pids.current
-cgroup.subtree_control  cpu.uclamp.max         hugetlb.2MB.max           memory.max           pids.events
-cgroup.threads          cpu.uclamp.min         hugetlb.2MB.rsvd.current  memory.min           pids.max
-cgroup.type             cpu.weight             hugetlb.2MB.rsvd.max      memory.numa_stat     rdma.current
-cpu.idle                cpu.weight.nice        io.max                    memory.oom.group     rdma.max
-cpu.max                 hugetlb.1GB.current    io.pressure               memory.pressure
-
-cpu.stat)
-usage_usec 40775984
-user_usec 28691830
-system_usec 12084153
-nr_periods 0
-nr_throttled 0
-throttled_usec 0
-
-
-*/

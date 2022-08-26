@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/nomad/plugins/drivers"
 	"github.com/shoenig/nomad-pledge/pkg/pledge"
+	"github.com/shoenig/nomad-pledge/pkg/resources"
 	"oss.indeed.com/go/libtime"
 )
 
@@ -39,7 +40,7 @@ func NewHandle(runner pledge.Exec, config *drivers.TaskConfig) (*Handle, time.Ti
 	}, now
 }
 
-func (h *Handle) Stats() pledge.Utilization {
+func (h *Handle) Stats() resources.Utilization {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 	return h.runner.Stats()
