@@ -224,14 +224,14 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 	opts := &pledge.Options{
 		Command:   taskConfig.Command,
 		Arguments: taskConfig.Args,
-		Pledges:   taskConfig.Pledges,
+		Promises:  taskConfig.Promises,
 		Unveil:    taskConfig.Unveil,
 	}
 	p.logger.Trace(
 		"pledge runner",
 		"cmd", opts.Command,
 		"args", opts.Arguments,
-		"pledges", opts.Pledges,
+		"promises", opts.Promises,
 		"unveil", opts.Unveil,
 	)
 

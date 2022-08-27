@@ -34,12 +34,12 @@ type Environment struct {
 type Options struct {
 	Command   string
 	Arguments []string
-	Pledges   string
+	Promises  string
 	Unveil    []string
 }
 
 func (o *Options) String() string {
-	return fmt.Sprintf("(%s, %v, %v, %v)", o.Command, o.Arguments, o.Pledges, o.Unveil)
+	return fmt.Sprintf("(%s, %v, %v, %v)", o.Command, o.Arguments, o.Promises, o.Unveil)
 }
 
 func New(bin string, env *Environment, opts *Options) Exec {
@@ -183,8 +183,8 @@ func (e *exe) parameters() string {
 	result := []string{e.bin}
 
 	// append the list of pledges
-	if e.opts.Pledges != "" {
-		result = append(result, "-p", "'"+e.opts.Pledges+"'")
+	if e.opts.Promises != "" {
+		result = append(result, "-p", "'"+e.opts.Promises+"'")
 	}
 
 	// append the list of unveils
