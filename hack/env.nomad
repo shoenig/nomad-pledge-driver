@@ -3,12 +3,19 @@ job "env" {
   type        = "sysbatch"
 
   group "group" {
+
+    restart {
+      attempts = 0
+      mode     = "fail"
+    }
+
     task "env" {
       driver = "pledge"
+      user   = "anonymous"
       config {
-        command = "env"
-        args    = []
-        pledges = "stdio rpath"
+        command  = "env"
+        args     = []
+        promises = "stdio rpath"
       }
     }
   }

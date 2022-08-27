@@ -1,4 +1,4 @@
-job "cat" {
+job "bad-cat" {
   datacenters = ["dc1"]
   type        = "sysbatch"
 
@@ -6,9 +6,9 @@ job "cat" {
     task "cat" {
       driver = "pledge"
       config {
-        command = "cat"
-        args    = ["/etc/passwd"]
-        pledges = "stdio rpath"
+        command  = "cat"
+        args     = ["/etc/passwd"]
+        promises = "stdio rpath"
       }
     }
   }

@@ -7,9 +7,9 @@ job "curl" {
       driver = "pledge"
       user   = "nobody"
       config {
-        command = "curl"
-        args    = ["example.com"]
-        pledges = "stdio rpath inet unix sendfd dns"
+        command  = "curl"
+        args     = ["example.com"]
+        promises = "stdio rpath inet unix sendfd dns"
       }
     }
   }
