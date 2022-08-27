@@ -1,6 +1,6 @@
 job "curl" {
   datacenters = ["dc1"]
-  type        = "sysbatch"
+  type        = "batch"
 
   group "group" {
     task "curl" {
