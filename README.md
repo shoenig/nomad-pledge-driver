@@ -94,4 +94,4 @@ The `nomad-pledge-driver` plugin is currently under active development - anythin
 
 ### License
 
-The `noamd-pledge-driver` task driver plugin is made open source under the [BSD-3-Clause](LICENSE) license.
+The `noamd-pledge-driver` task driver plugin is made open source under the [MPL-2.0](LICENSE) license.
