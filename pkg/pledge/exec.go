@@ -202,6 +202,22 @@ func (e *exe) parameters() string {
 	return strings.Join(result, " ")
 }
 
+// prepare will simply run the pledge binary with no arguments - causing it
+// to create the underlying .ape and sandbox.so files in the home directory
+// specified. This is a workaround for some weird issue where creating these
+// files does not work while in a cgroup, as is the case during normal start.
+func (e *exe) prepare(home string, uid, gid uint32) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", e.bin+" -h")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid:    true, // ignore signals sent to nomad
+		Credential: &syscall.Credential{Uid: uid, Gid: gid},
+	}
+	cmd.Env = []string{fmt.Sprintf("HOME=%s", home)}
+	return cmd.Run()
+}
+
 func (e *exe) Start(ctx Ctx) error {
 	uid, gid, home, err := lookup(e.env.User)
 	if err != nil {
@@ -211,6 +227,11 @@ func (e *exe) Start(ctx Ctx) error {
 	home, err = ensureHome(home, e.env.User, int(uid), int(gid))
 	if err != nil {
 		return fmt.Errorf("failed to start command without home directory: %w", err)
+	}
+
+	// prepare sandbox.so library before launching real command in cgroup
+	if err = e.prepare(home, uid, gid); err != nil {
+		return fmt.Errorf("failed to prestart command: %w", err)
 	}
 
 	params := e.parameters()
@@ -223,6 +244,7 @@ func (e *exe) Start(ctx Ctx) error {
 		Setpgid:    true, // ignore signals sent to nomad
 		Credential: &syscall.Credential{Uid: uid, Gid: gid},
 	}
+
 	if err = e.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
