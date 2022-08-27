@@ -32,10 +32,11 @@ type Environment struct {
 }
 
 type Options struct {
-	Command   string
-	Arguments []string
-	Promises  string
-	Unveil    []string
+	Command     string
+	Arguments   []string
+	Promises    string
+	Unveil      []string
+	Unimportant bool
 }
 
 func (o *Options) String() string {
@@ -181,6 +182,11 @@ func flatten(user, home string, env map[string]string) []string {
 func (e *exe) parameters() string {
 	// start with the pledge executable
 	result := []string{e.bin}
+
+	// append low priority if set
+	if e.opts.Unimportant {
+		result = append(result, "-n")
+	}
 
 	// append the list of pledges
 	if e.opts.Promises != "" {
