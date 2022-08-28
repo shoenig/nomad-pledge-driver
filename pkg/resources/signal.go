@@ -1,11 +1,11 @@
-package signals
+package resources
 
 import (
 	"strings"
 	"syscall"
 )
 
-func From(s string) syscall.Signal {
+func ParseSignal(s string) syscall.Signal {
 	switch strings.ToLower(s) {
 	case "sighup":
 		return syscall.SIGHUP

@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/nomad/plugins/shared/hclspec"
 	"github.com/hashicorp/nomad/plugins/shared/structs"
 	"github.com/shoenig/nomad-pledge/pkg/pledge"
-	"github.com/shoenig/nomad-pledge/pkg/signals"
+	"github.com/shoenig/nomad-pledge/pkg/resources"
 	"github.com/shoenig/nomad-pledge/pkg/task"
 	"golang.org/x/sys/unix"
 	"oss.indeed.com/go/libtime"
@@ -320,7 +320,7 @@ func (p *PledgeDriver) StopTask(taskID string, timeout time.Duration, signal str
 	if !exists {
 		return nil
 	}
-	return h.Stop(signals.From(signal), timeout)
+	return h.Stop(resources.ParseSignal(signal), timeout)
 }
 
 func (p *PledgeDriver) DestroyTask(taskID string, force bool) error {
@@ -332,7 +332,7 @@ func (p *PledgeDriver) DestroyTask(taskID string, force bool) error {
 	if !exists {
 		return nil
 	}
-	return h.Signal(signals.From("sigkill"))
+	return h.Signal(resources.ParseSignal("sigkill"))
 }
 
 func (p *PledgeDriver) InspectTask(taskID string) (*drivers.TaskStatus, error) {
@@ -409,7 +409,7 @@ func (p *PledgeDriver) SignalTask(taskID string, signal string) error {
 	if !exists {
 		return nil
 	}
-	return h.Signal(signals.From(signal))
+	return h.Signal(resources.ParseSignal(signal))
 }
 
 func (p *PledgeDriver) ExecTask(taskID string, cmd []string, timeout time.Duration) (*drivers.ExecTaskResult, error) {
