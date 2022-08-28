@@ -6,10 +6,10 @@ job "sleep" {
     task "sleep" {
       driver = "pledge"
       config {
-        command     = "sleep"
-        args        = ["1d"]
-        promises    = "stdio rpath"
-        unimportant = true
+        command    = "sleep"
+        args       = ["1d"]
+        promises   = "stdio rpath"
+        importance = "highest"
       }
     }
   }

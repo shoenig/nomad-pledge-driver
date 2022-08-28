@@ -221,12 +221,18 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		Cgroup: fmt.Sprintf("/sys/fs/cgroup/nomad.slice/%s.%s.scope", config.AllocID, config.Name),
 	}
 
+	importance, err := resources.ParseImportance(taskConfig.Importance)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// todo: should be some ParseOptions thing
 	opts := &pledge.Options{
-		Command:     taskConfig.Command,
-		Arguments:   taskConfig.Args,
-		Promises:    taskConfig.Promises,
-		Unveil:      taskConfig.Unveil,
-		Unimportant: taskConfig.Unimportant,
+		Command:    taskConfig.Command,
+		Arguments:  taskConfig.Args,
+		Promises:   taskConfig.Promises,
+		Unveil:     taskConfig.Unveil,
+		Importance: importance,
 	}
 	p.logger.Trace(
 		"pledge runner",
@@ -234,7 +240,7 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		"args", opts.Arguments,
 		"promises", opts.Promises,
 		"unveil", opts.Unveil,
-		"unimportant", opts.Unimportant,
+		"importance", opts.Importance,
 	)
 
 	runner := pledge.New(p.config.PledgeExecutable, env, opts)

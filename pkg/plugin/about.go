@@ -31,11 +31,11 @@ var driverConfigSpec = hclspec.NewObject(map[string]*hclspec.Spec{
 })
 
 var taskConfigSpec = hclspec.NewObject(map[string]*hclspec.Spec{
-	"command":     hclspec.NewAttr("command", "string", true),
-	"args":        hclspec.NewAttr("args", "list(string)", false),
-	"promises":    hclspec.NewAttr("promises", "string", false),
-	"unveil":      hclspec.NewAttr("unveil", "list(string)", false),
-	"unimportant": hclspec.NewAttr("unimportant", "bool", false),
+	"command":    hclspec.NewAttr("command", "string", true),
+	"args":       hclspec.NewAttr("args", "list(string)", false),
+	"promises":   hclspec.NewAttr("promises", "string", false),
+	"unveil":     hclspec.NewAttr("unveil", "list(string)", false),
+	"importance": hclspec.NewAttr("importance", "string", false),
 })
 
 var capabilities = &drivers.Capabilities{
@@ -57,9 +57,9 @@ type Config struct {
 // TaskConfig represents the pledge-driver task configuration that gets set in
 // a Nomad job file.
 type TaskConfig struct {
-	Command     string   `codec:"command"`
-	Args        []string `codec:"args"`
-	Promises    string   `codec:"promises"`
-	Unveil      []string `codec:"unveil"`
-	Unimportant bool     `codec:"unimportant"`
+	Command    string   `codec:"command"`
+	Args       []string `codec:"args"`
+	Promises   string   `codec:"promises"`
+	Unveil     []string `codec:"unveil"`
+	Importance string   `codec:"importance"`
 }

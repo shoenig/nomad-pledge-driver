@@ -32,15 +32,15 @@ type Environment struct {
 }
 
 type Options struct {
-	Command     string
-	Arguments   []string
-	Promises    string
-	Unveil      []string
-	Unimportant bool
+	Command    string
+	Arguments  []string
+	Promises   string
+	Unveil     []string
+	Importance *resources.Importance
 }
 
 func (o *Options) String() string {
-	return fmt.Sprintf("(%s, %v, %v, %v)", o.Command, o.Arguments, o.Promises, o.Unveil)
+	return fmt.Sprintf("(%s, %v, %s, %v, %s)", o.Command, o.Arguments, o.Promises, o.Unveil, o.Importance)
 }
 
 func New(bin string, env *Environment, opts *Options) Exec {
@@ -183,11 +183,6 @@ func (e *exe) parameters() string {
 	// start with the pledge executable
 	result := []string{e.bin}
 
-	// append low priority if set
-	if e.opts.Unimportant {
-		result = append(result, "-n")
-	}
-
 	// append the list of pledges
 	if e.opts.Promises != "" {
 		result = append(result, "-p", "'"+e.opts.Promises+"'")
@@ -262,6 +257,7 @@ func (e *exe) Start(ctx Ctx) error {
 
 // isolate this process to the cgroup for this task
 func (e *exe) isolate() error {
+	_ = e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
 	return e.writeCG("cgroup.procs", strconv.Itoa(e.PID()))
 }
 
