@@ -153,7 +153,7 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 	unveil := p.detect("unveil")
 	if !unveil {
 		healthState = drivers.HealthStateUnhealthy
-		healthDescription = "kernel too old"
+		healthDescription = "kernel landlock not enabled"
 	}
 
 	return &drivers.Fingerprint{
