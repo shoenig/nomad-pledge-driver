@@ -75,16 +75,25 @@ type Exec interface {
 	// Result of the process after completion.
 	//
 	// Must be called after Wait.
-	Result() (int, time.Duration)
+	Result() int // exit code
 }
 
+// exe is the interface we create over a process
+//
+// We must always be able to re-create the exe object
+// after an agent/plugin restart, given only a PID.
 type exe struct {
-	bin  string // pledge executable
+	// pledge executable
+	bin string
+
+	// comes from task config
 	env  *Environment
 	opts *Options
 
-	cmd *exec.Cmd
-	cpu *resources.TrackCPU
+	// comes from runtime
+	cpu     *resources.TrackCPU
+	process *os.Process
+	code    int
 }
 
 // lookup returns the uid, gid, and home directory of the given user.
@@ -129,7 +138,7 @@ func ensureHome(home, user string, uid, gid int) (string, error) {
 }
 
 func (e *exe) PID() int {
-	return e.cmd.Process.Pid
+	return e.process.Pid
 }
 
 func (e *exe) readCG(file string) (string, error) {
@@ -227,19 +236,21 @@ func (e *exe) Start(ctx Ctx) error {
 	}
 
 	params := e.parameters()
-	e.cmd = exec.CommandContext(ctx, "/bin/sh", "-c", params)
-	e.cmd.Stdout = e.env.Out
-	e.cmd.Stderr = e.env.Err
-	e.cmd.Env = flatten(e.env.User, home, e.env.Env)
-	e.cmd.Dir = e.env.Dir
-	e.cmd.SysProcAttr = &syscall.SysProcAttr{
+
+	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", params)
+	cmd.Stdout = e.env.Out
+	cmd.Stderr = e.env.Err
+	cmd.Env = flatten(e.env.User, home, e.env.Env)
+	cmd.Dir = e.env.Dir
+	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid:    true, // ignore signals sent to nomad
 		Credential: &syscall.Credential{Uid: uid, Gid: gid},
 	}
 
-	if err = e.cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
+	e.process = cmd.Process
 
 	// Ideally we would fork a trusted helper, enter the cgroup ourselves, then
 	// exec into the user subprocess. This is fine for now.
@@ -254,17 +265,23 @@ func (e *exe) isolate() error {
 }
 
 func (e *exe) Wait() error {
-	return e.cmd.Wait()
+	ps, err := e.process.Wait()
+	exitCode := ps.ExitCode()
+	ws := ps.Sys().(syscall.WaitStatus)
+	if exitCode < 0 {
+		e.code = int(ws) // will be the uncaught signal
+	} else {
+		e.code = exitCode // process set the exit code
+	}
+	return err
 }
 
-func (e *exe) Result() (int, time.Duration) {
-	elapsed := e.cmd.ProcessState.UserTime()
-	code := e.cmd.ProcessState.ExitCode()
-	return code, elapsed
+func (e *exe) Result() int {
+	return e.code
 }
 
 func (e *exe) Signal(signal syscall.Signal) error {
-	return syscall.Kill(-e.cmd.Process.Pid, signal)
+	return syscall.Kill(-e.process.Pid, signal)
 }
 
 func (e *exe) Stop(signal syscall.Signal, timeout time.Duration) error {
@@ -301,10 +318,12 @@ func (e *exe) Stats() resources.Utilization {
 	ticks := (.01 * totalPct) * float64(specs.Ticks()/specs.Cores)
 
 	return resources.Utilization{
+		// memory stats
 		Memory: uint64(memCurrent),
 		Swap:   uint64(swapCurrent),
 		Cache:  memCache,
 
+		// cpu stats
 		System:  userPct,
 		User:    systemPct,
 		Percent: totalPct,

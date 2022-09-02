@@ -280,7 +280,7 @@ func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
 }
 
 func (p *PledgeDriver) WaitTask(ctx context.Context, taskID string) (<-chan *drivers.ExitResult, error) {
-	p.logger.Trace("WaitTask enter")
+	p.logger.Trace("wait task", "id", taskID)
 
 	handle, exists := p.tasks.Get(taskID)
 	if !exists {
@@ -300,7 +300,7 @@ func (p *PledgeDriver) WaitTask(ctx context.Context, taskID string) (<-chan *dri
 }
 
 func (p *PledgeDriver) StopTask(taskID string, timeout time.Duration, signal string) error {
-	p.logger.Trace("StopTask enter", "id", taskID, "timeout", timeout, "signal", signal)
+	p.logger.Debug("stop task", "id", taskID, "timeout", timeout, "signal", signal)
 
 	if signal == "" {
 		signal = "sigterm"
@@ -314,15 +314,25 @@ func (p *PledgeDriver) StopTask(taskID string, timeout time.Duration, signal str
 }
 
 func (p *PledgeDriver) DestroyTask(taskID string, force bool) error {
-	p.logger.Trace("DestroyTask enter", "id", taskID, "force", force)
-
-	// todo: respect force
+	p.logger.Debug("destroy task", "id", taskID, "force", force)
 
 	h, exists := p.tasks.Get(taskID)
 	if !exists {
 		return nil
 	}
-	return h.Signal(resources.ParseSignal("sigkill"))
+
+	var err error
+	if h.IsRunning() {
+		switch force {
+		case false:
+			err = errors.New("cannot destroy running task")
+		case true:
+			err = h.Stop(resources.ParseSignal("sigabrt"), 100*time.Millisecond)
+		}
+	}
+
+	p.tasks.Del(taskID)
+	return err
 }
 
 func (p *PledgeDriver) InspectTask(taskID string) (*drivers.TaskStatus, error) {
@@ -333,13 +343,10 @@ func (p *PledgeDriver) InspectTask(taskID string) (*drivers.TaskStatus, error) {
 }
 
 func (p *PledgeDriver) TaskStats(ctx context.Context, taskID string, interval time.Duration) (<-chan *drivers.TaskResourceUsage, error) {
-	p.logger.Trace("TaskStats enter")
-
 	h, exists := p.tasks.Get(taskID)
 	if !exists {
 		return nil, nil
 	}
-
 	ch := make(chan *drivers.TaskResourceUsage)
 	go p.stats(ctx, ch, interval, h)
 	return ch, nil
@@ -393,8 +400,9 @@ func (p *PledgeDriver) TaskEvents(ctx context.Context) (<-chan *drivers.TaskEven
 }
 
 func (p *PledgeDriver) SignalTask(taskID string, signal string) error {
-	p.logger.Trace("SignalTask enter", "signal", signal)
-
+	if signal == "" {
+		return errors.New("signal must be set")
+	}
 	h, exists := p.tasks.Get(taskID)
 	if !exists {
 		return nil

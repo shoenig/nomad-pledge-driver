@@ -82,10 +82,9 @@ func (h *Handle) Block() {
 		return
 	}
 
+	h.result.ExitCode = h.runner.Result()
+	h.completed = h.clock.Now()
 	h.state = drivers.TaskStateExited
-	code, elapsed := h.runner.Result()
-	h.completed = h.started.Add(elapsed)
-	h.result.ExitCode = code
 }
 
 func (h *Handle) Signal(signal syscall.Signal) error {
