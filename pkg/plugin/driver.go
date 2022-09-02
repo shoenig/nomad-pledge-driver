@@ -306,8 +306,6 @@ func (p *PledgeDriver) StopTask(taskID string, timeout time.Duration, signal str
 		signal = "sigterm"
 	}
 
-	// todo: respect timeout
-
 	h, exists := p.tasks.Get(taskID)
 	if !exists {
 		return nil

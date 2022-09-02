@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/go-set"
 	"github.com/shoenig/nomad-pledge/pkg/resources"
-	"oss.indeed.com/go/libtime"
 )
 
 type Ctx = context.Context
@@ -249,8 +248,9 @@ func (e *exe) Start(ctx Ctx) error {
 
 // isolate this process to the cgroup for this task
 func (e *exe) isolate() error {
+	err := e.writeCG("cgroup.procs", strconv.Itoa(e.PID()))
 	_ = e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
-	return e.writeCG("cgroup.procs", strconv.Itoa(e.PID()))
+	return err
 }
 
 func (e *exe) Wait() error {
@@ -269,21 +269,13 @@ func (e *exe) Signal(signal syscall.Signal) error {
 
 func (e *exe) Stop(signal syscall.Signal, timeout time.Duration) error {
 	// politely ask the group to terminate via user specified signal
-
-	// todo this should block until entire cgroup is toast, which we
-	//  could check via an empty cgroup.procs
-
 	err := e.Signal(signal)
-	go func() {
-		timer, cancel := libtime.SafeTimer(timeout)
-		defer cancel()
-		<-timer.C
-
+	if e.blockPIDs(timeout) {
 		// no more mr. nice guy, kill the whole cgroup
 		_ = e.writeCG("cgroup.kill", "1")
 		_ = e.env.Out.Close()
 		_ = e.env.Err.Close()
-	}()
+	}
 	return err
 }
 
