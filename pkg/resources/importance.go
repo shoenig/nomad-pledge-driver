@@ -29,7 +29,7 @@ func ParseImportance(s string) (*Importance, error) {
 		nice = -20
 	case "high":
 		nice = -10
-	case "normal":
+	case "", "normal":
 		nice = -5
 	case "low":
 		nice = 10
