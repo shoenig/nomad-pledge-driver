@@ -1,6 +1,6 @@
 job "sleep" {
   datacenters = ["dc1"]
-  type        = "batch"
+  type        = "sysbatch"
 
   group "group" {
     task "sleep" {
@@ -9,7 +9,7 @@ job "sleep" {
         command    = "sleep"
         args       = ["1d"]
         promises   = "stdio rpath"
-        importance = "highest"
+        importance = "low"
       }
     }
   }

@@ -3,7 +3,6 @@ job "py" {
   type        = "service"
 
   group "group" {
-
     restart {
       attempts = 0
       mode     = "fail"
