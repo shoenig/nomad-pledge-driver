@@ -31,14 +31,6 @@ type Environment struct {
 	Cgroup string
 }
 
-type Options struct {
-	Command    string
-	Arguments  []string
-	Promises   string
-	Unveil     []string
-	Importance *resources.Importance
-}
-
 func (o *Options) String() string {
 	return fmt.Sprintf("(%s, %v, %s, %v, %s)", o.Command, o.Arguments, o.Promises, o.Unveil, o.Importance)
 }

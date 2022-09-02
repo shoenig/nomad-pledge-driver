@@ -1,9 +1,13 @@
 package plugin
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/nomad/plugins/base"
 	"github.com/hashicorp/nomad/plugins/drivers"
 	"github.com/hashicorp/nomad/plugins/shared/hclspec"
+	"github.com/shoenig/nomad-pledge/pkg/pledge"
+	"github.com/shoenig/nomad-pledge/pkg/resources"
 )
 
 const (
@@ -62,4 +66,22 @@ type TaskConfig struct {
 	Promises   string   `codec:"promises"`
 	Unveil     []string `codec:"unveil"`
 	Importance string   `codec:"importance"`
+}
+
+func parseOptions(driverTaskConfig *drivers.TaskConfig) (*pledge.Options, error) {
+	var taskConfig TaskConfig
+	if err := driverTaskConfig.DecodeDriverConfig(&taskConfig); err != nil {
+		return nil, fmt.Errorf("failed to decode driver task config: %w", err)
+	}
+	importance, err := resources.ParseImportance(taskConfig.Importance)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse task importance: %w", err)
+	}
+	return &pledge.Options{
+		Command:    taskConfig.Command,
+		Arguments:  taskConfig.Args,
+		Promises:   taskConfig.Promises,
+		Unveil:     taskConfig.Unveil,
+		Importance: importance,
+	}, nil
 }

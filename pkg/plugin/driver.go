@@ -130,7 +130,7 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 	if err != nil {
 		return &drivers.Fingerprint{
 			Health:            drivers.HealthStateUndetected,
-			HealthDescription: fmt.Sprintf("failed to detect absolute path of pledge executable: %w", err),
+			HealthDescription: fmt.Sprintf("failed to detect absolute path of pledge executable: %s", err),
 		}
 	}
 
@@ -178,7 +178,7 @@ func open(stdout, stderr string) (io.WriteCloser, io.WriteCloser, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	b, err := os.OpenFile(stdout, unix.O_WRONLY, os.ModeNamedPipe)
+	b, err := os.OpenFile(stderr, unix.O_WRONLY, os.ModeNamedPipe)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -194,12 +194,6 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 	if _, exists := p.tasks.Get(config.ID); exists {
 		p.logger.Error("task with id already started", "id", config.ID)
 		return nil, nil, fmt.Errorf("task with ID %s already started", config.ID)
-	}
-
-	var taskConfig TaskConfig
-	if err := config.DecodeDriverConfig(&taskConfig); err != nil {
-		p.logger.Error("failed to decode driver config", "error", err)
-		return nil, nil, fmt.Errorf("failed to decode driver task config: %w", err)
 	}
 
 	handle := drivers.NewTaskHandle(HandleVersion)
@@ -221,19 +215,11 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		Cgroup: fmt.Sprintf("/sys/fs/cgroup/nomad.slice/%s.%s.scope", config.AllocID, config.Name),
 	}
 
-	importance, err := resources.ParseImportance(taskConfig.Importance)
+	opts, err := parseOptions(config)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// todo: should be some ParseOptions thing
-	opts := &pledge.Options{
-		Command:    taskConfig.Command,
-		Arguments:  taskConfig.Args,
-		Promises:   taskConfig.Promises,
-		Unveil:     taskConfig.Unveil,
-		Importance: importance,
-	}
 	p.logger.Trace(
 		"pledge runner",
 		"cmd", opts.Command,

@@ -36,7 +36,7 @@ func ParseImportance(s string) (*Importance, error) {
 	case "lowest":
 		nice = 19
 	default:
-		return nil, fmt.Errorf("importance setting %q not recognized", label)
+		return nil, fmt.Errorf("importance of %q not recognized", label)
 	}
 	return &Importance{
 		Label: label,
