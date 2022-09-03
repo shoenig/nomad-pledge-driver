@@ -394,6 +394,18 @@ func (p *PledgeDriver) stats(ctx context.Context, ch chan<- *drivers.TaskResourc
 func (p *PledgeDriver) TaskEvents(ctx context.Context) (<-chan *drivers.TaskEvent, error) {
 	p.logger.Trace("TaskEvents enter")
 
+	// e.g.
+	//  d.eventer.EmitEvent(&drivers.TaskEvent{
+	//	  TaskID:    task.ID,
+	//	  AllocID:   task.AllocID,
+	//	  TaskName:  task.Name,
+	//	  Timestamp: time.Now(),
+	//	  Message:   "Downloading image",
+	//	  Annotations: map[string]string{
+	//	  		"image": dockerImageRef(repo, tag),
+	//	  },
+	//  })
+
 	// todo: implement
 	ch := make(chan *drivers.TaskEvent, 1)
 	return ch, nil

@@ -7,7 +7,6 @@ job "env" {
       driver = "pledge"
       config {
         command  = "env"
-        args     = []
         promises = "stdio rpath"
       }
     }
