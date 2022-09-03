@@ -66,12 +66,12 @@ type Exec interface {
 	// Signal the process.
 	//
 	// Must be called after Start.
-	Signal(syscall.Signal) error
+	Signal(string) error
 
 	// Stop the process.
 	//
 	// Must be called after Start.
-	Stop(syscall.Signal, time.Duration) error
+	Stop(string, time.Duration) error
 
 	// Result of the process after completion.
 	//
@@ -92,11 +92,11 @@ type exe struct {
 	opts *Options
 
 	// comes from runtime
-	pid     int
-	cpu     *resources.TrackCPU
-	waiter  process.Waiter
-	process *os.Process
-	code    int
+	pid    int
+	cpu    *resources.TrackCPU
+	waiter process.Waiter
+	signal process.Signaler
+	code   int
 }
 
 // lookup returns the uid, gid, and home directory of the given user.
@@ -256,7 +256,7 @@ func (e *exe) Start(ctx Ctx) error {
 
 	e.pid = cmd.Process.Pid
 	e.waiter = process.WaitOnChild(cmd.Process)
-	e.process = cmd.Process
+	e.signal = process.Interrupts(cmd.Process.Pid)
 
 	// Ideally we would fork a trusted helper, enter the cgroup ourselves, then
 	// exec into the user subprocess. This is fine for now.
@@ -280,11 +280,11 @@ func (e *exe) Result() int {
 	return e.code
 }
 
-func (e *exe) Signal(signal syscall.Signal) error {
-	return syscall.Kill(-e.process.Pid, signal)
+func (e *exe) Signal(signal string) error {
+	return e.signal.Signal(signal)
 }
 
-func (e *exe) Stop(signal syscall.Signal, timeout time.Duration) error {
+func (e *exe) Stop(signal string, timeout time.Duration) error {
 	// politely ask the group to terminate via user specified signal
 	err := e.Signal(signal)
 	if e.blockPIDs(timeout) {

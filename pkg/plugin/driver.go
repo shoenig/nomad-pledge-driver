@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/nomad/plugins/shared/hclspec"
 	"github.com/hashicorp/nomad/plugins/shared/structs"
 	"github.com/shoenig/nomad-pledge/pkg/pledge"
-	"github.com/shoenig/nomad-pledge/pkg/resources"
 	"github.com/shoenig/nomad-pledge/pkg/task"
 	"golang.org/x/sys/unix"
 	"oss.indeed.com/go/libtime"
@@ -310,7 +309,7 @@ func (p *PledgeDriver) StopTask(taskID string, timeout time.Duration, signal str
 	if !exists {
 		return nil
 	}
-	return h.Stop(resources.ParseSignal(signal), timeout)
+	return h.Stop(signal, timeout)
 }
 
 func (p *PledgeDriver) DestroyTask(taskID string, force bool) error {
@@ -327,7 +326,7 @@ func (p *PledgeDriver) DestroyTask(taskID string, force bool) error {
 		case false:
 			err = errors.New("cannot destroy running task")
 		case true:
-			err = h.Stop(resources.ParseSignal("sigabrt"), 100*time.Millisecond)
+			err = h.Stop("sigabrt", 100*time.Millisecond)
 		}
 	}
 
@@ -419,7 +418,7 @@ func (p *PledgeDriver) SignalTask(taskID string, signal string) error {
 	if !exists {
 		return nil
 	}
-	return h.Signal(resources.ParseSignal(signal))
+	return h.Signal(signal)
 }
 
 func (p *PledgeDriver) ExecTask(taskID string, cmd []string, timeout time.Duration) (*drivers.ExecTaskResult, error) {

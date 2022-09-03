@@ -46,7 +46,7 @@ func WaitOnOrphan(pid int) Waiter {
 }
 
 type pidWaiter struct {
-	//
+	// todo
 }
 
 func (w *pidWaiter) Wait() *Exit {
