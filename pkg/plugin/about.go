@@ -77,10 +77,14 @@ func parseOptions(driverTaskConfig *drivers.TaskConfig) (*pledge.Options, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse task importance: %w", err)
 	}
+	promises, err := checkPromises(taskConfig.Promises)
+	if err != nil {
+		return nil, fmt.Errorf("failed promise validations: %w", err)
+	}
 	return &pledge.Options{
 		Command:    taskConfig.Command,
 		Arguments:  taskConfig.Args,
-		Promises:   taskConfig.Promises,
+		Promises:   promises,
 		Unveil:     taskConfig.Unveil,
 		Importance: importance,
 	}, nil
