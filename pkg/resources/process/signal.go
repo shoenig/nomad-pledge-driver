@@ -31,10 +31,12 @@ func parse(s string) syscall.Signal {
 		return syscall.SIGALRM
 	case "sigterm":
 		return syscall.SIGTERM
+	case "sigstop":
+		return syscall.SIGSTOP
 	case "sigpwr":
 		return syscall.SIGPWR
 	default:
-		return syscall.SIGABRT
+		return syscall.SIGSTOP
 	}
 }
 
