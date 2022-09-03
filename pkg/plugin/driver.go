@@ -251,9 +251,11 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 }
 
 // RecoverTask will re-create the in-memory state of a task from a TaskHandle
-// coming from Nomad.
+// coming from Nomad. Hopefully this should never happen because the pledge driver
+// runs independently from the Nomad Client process.
 func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
-	p.logger.Trace("RecoverTask enter")
+	p.logger.Warn("recovering task", "id", handle.Config.ID)
+
 	if handle == nil {
 		return errors.New("failed to recover task, handle is nil")
 	}
@@ -272,14 +274,16 @@ func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
 		return fmt.Errorf("failed to decode task config: %w", err)
 	}
 
-	// implement logic to recover task ...
-	// without the executor indirection, we need
-
-	panic("ehh not finished yet")
+	runner := pledge.Recover(taskState.PID)
+	recHandle := task.RecreateHandle(runner, taskState.TaskConfig, taskState.StartedAt)
+	p.tasks.Set(taskState.TaskConfig.ID, recHandle)
+	return nil
 }
 
+// WaitTask waits on the task to reach completion - whether by terminating
+// gracefully and setting an exit code or by being rudely interrupted.
 func (p *PledgeDriver) WaitTask(ctx context.Context, taskID string) (<-chan *drivers.ExitResult, error) {
-	p.logger.Trace("wait task", "id", taskID)
+	p.logger.Trace("waiting on task", "id", taskID)
 
 	handle, exists := p.tasks.Get(taskID)
 	if !exists {
@@ -390,9 +394,8 @@ func (p *PledgeDriver) stats(ctx context.Context, ch chan<- *drivers.TaskResourc
 	}
 }
 
-func (p *PledgeDriver) TaskEvents(ctx context.Context) (<-chan *drivers.TaskEvent, error) {
-	p.logger.Trace("TaskEvents enter")
-
+func (p *PledgeDriver) TaskEvents(_ context.Context) (<-chan *drivers.TaskEvent, error) {
+	// is there any use for this?
 	// e.g.
 	//  d.eventer.EmitEvent(&drivers.TaskEvent{
 	//	  TaskID:    task.ID,
@@ -404,8 +407,6 @@ func (p *PledgeDriver) TaskEvents(ctx context.Context) (<-chan *drivers.TaskEven
 	//	  		"image": dockerImageRef(repo, tag),
 	//	  },
 	//  })
-
-	// todo: implement
 	ch := make(chan *drivers.TaskEvent, 1)
 	return ch, nil
 }

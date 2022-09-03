@@ -44,6 +44,15 @@ func New(bin string, env *Environment, opts *Options) Exec {
 	}
 }
 
+func Recover(pid int) Exec {
+	return &exe{
+		pid:    pid,
+		waiter: process.WaitOnOrphan(pid),
+		signal: process.Interrupts(pid),
+		cpu:    new(resources.TrackCPU),
+	}
+}
+
 type Exec interface {
 	// Start the process.
 	Start(ctx Ctx) error

@@ -39,6 +39,17 @@ func NewHandle(runner pledge.Exec, config *drivers.TaskConfig) (*Handle, time.Ti
 	}, now
 }
 
+func RecreateHandle(runner pledge.Exec, config *drivers.TaskConfig, started time.Time) *Handle {
+	return &Handle{
+		pid:     runner.PID(),
+		runner:  runner,
+		config:  config,
+		state:   drivers.TaskStateUnknown,
+		started: started,
+		result:  new(drivers.ExitResult),
+	}
+}
+
 func (h *Handle) Stats() resources.Utilization {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
