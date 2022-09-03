@@ -4,6 +4,8 @@
 
 `nomad-pledge-driver` is a Nomad task driver based on the `pledge` [utility for Linux](https://justine.lol/pledge/) by Justine Tunney.
 
+*Security through SECCOMP sorcery*
+
 ### :warning: Experimental :warning:
 
 This task driver is experimental. It might work, it might crash, or it might do nothing at all.
