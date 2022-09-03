@@ -13,13 +13,13 @@ type Store interface {
 
 func NewStore() Store {
 	return &store{
-		store: make(map[string]*Handle),
+		store: make(map[ID]*Handle),
 	}
 }
 
 type store struct {
 	lock  sync.RWMutex
-	store map[string]*Handle
+	store map[ID]*Handle
 }
 
 func (s *store) Set(id ID, handle *Handle) {
