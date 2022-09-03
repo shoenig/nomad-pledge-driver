@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/go-set"
 	"github.com/shoenig/nomad-pledge/pkg/resources"
+	"github.com/shoenig/nomad-pledge/pkg/resources/process"
 )
 
 type Ctx = context.Context
@@ -91,7 +92,9 @@ type exe struct {
 	opts *Options
 
 	// comes from runtime
+	pid     int
 	cpu     *resources.TrackCPU
+	waiter  process.Waiter
 	process *os.Process
 	code    int
 }
@@ -138,7 +141,7 @@ func ensureHome(home, user string, uid, gid int) (string, error) {
 }
 
 func (e *exe) PID() int {
-	return e.process.Pid
+	return e.pid
 }
 
 func (e *exe) readCG(file string) (string, error) {
@@ -250,6 +253,9 @@ func (e *exe) Start(ctx Ctx) error {
 	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
+
+	e.pid = cmd.Process.Pid
+	e.waiter = process.WaitOnChild(cmd.Process)
 	e.process = cmd.Process
 
 	// Ideally we would fork a trusted helper, enter the cgroup ourselves, then
@@ -265,15 +271,9 @@ func (e *exe) isolate() error {
 }
 
 func (e *exe) Wait() error {
-	ps, err := e.process.Wait()
-	exitCode := ps.ExitCode()
-	ws := ps.Sys().(syscall.WaitStatus)
-	if exitCode < 0 {
-		e.code = int(ws) // will be the uncaught signal
-	} else {
-		e.code = exitCode // process set the exit code
-	}
-	return err
+	exit := e.waiter.Wait()
+	e.code = exit.Code
+	return exit.Err
 }
 
 func (e *exe) Result() int {
