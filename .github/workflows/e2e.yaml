@@ -1,0 +1,43 @@
+name: Run E2E Tests
+on: [push]
+env:
+  GO_VERSION: 1.19.2
+  PLEDGE_VERSION: pledge-1.8.com
+jobs:
+  run-e2e:
+    runs-on: [ubuntu-22.04]
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{env.GO_VERSION}}
+      - name: Install Nomad
+        run: |
+          wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo dd of=/usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo dd of=/etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install nomad
+          nomad version
+      - name: Install Plugin
+        run: |
+          make dev
+          mkdir /opt/bin
+          curl -L -o /opt/bin/${PLEDGE_VERSION} https://github.com/shoenig/nomad-pledge-driver/releases/download/${PLEDGE_VERSION}/${PLEDGE_VERSION}
+          chmod +x /opt/bin/${PLEDGE_VERSION}
+          mkdir /opt/nomad/plugins
+          cp output/pledge /opt/nomad/plugins/pledge
+          sudo cp e2e/resources/client.hcl /etc/nomad.d/nomad.hcl
+      - name: Start Nomad
+        run: |
+          cat /etc/nomad.d/nomad.hcl
+          sudo systemctl start nomad
+          sudo journalctl --no-tail -u nomad.service
+          ps -ef | grep nomad
+          sleep 5
+          nomad job status
+          nomad node status -self -verbose
+      - name: Basic Tests
+        run: |
+          go test -count=1 -v ./e2e
