@@ -9,7 +9,7 @@ job "curl" {
       config {
         command  = "curl"
         args     = ["example.com"]
-        promises = "stdio rpath inet unix sendfd dns"
+        promises = "stdio rpath inet dns sendfd"
       }
     }
   }

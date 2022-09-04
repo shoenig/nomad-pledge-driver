@@ -1,6 +1,6 @@
-job "bad-cat" {
+job "passwd" {
   datacenters = ["dc1"]
-  type        = "sysbatch"
+  type        = "batch"
 
   group "group" {
     task "cat" {
@@ -10,6 +10,11 @@ job "bad-cat" {
         args     = ["/etc/passwd"]
         promises = "stdio rpath"
       }
+    }
+
+    restart {
+      attempts = 0
+      mode     = "fail"
     }
   }
 }

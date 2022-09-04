@@ -9,7 +9,7 @@ job "sleep" {
         command    = "sleep"
         args       = ["1d"]
         promises   = "stdio rpath"
-        importance = "low"
+        importance = "lowest"
       }
     }
   }
