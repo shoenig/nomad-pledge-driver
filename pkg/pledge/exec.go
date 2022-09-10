@@ -3,7 +3,6 @@ package pledge
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -128,27 +127,6 @@ func lookup(name string) (uint32, uint32, string, error) {
 	return uint32(uid), uint32(gid), u.HomeDir, nil
 }
 
-// ensureHome will create a pseudo home directory for user if home does not exist
-func ensureHome(home, user string, uid, gid int) (string, error) {
-	info, statErr := os.Stat(home)
-	if errors.Is(statErr, os.ErrNotExist) {
-		// e.g. service users will have a non-existent home directory
-		home = "/tmp/pledge-" + user // if so, setup a home for them (probably belongs in /var/run)
-		if info, statErr = os.Stat(home); errors.Is(statErr, os.ErrNotExist) {
-			if mkErr := os.Mkdir(home, 0755); mkErr != nil {
-				return "", mkErr
-			} else {
-				return home, os.Chown(home, uid, gid)
-			}
-		}
-	} else if statErr != nil {
-		return "", statErr
-	} else if !info.IsDir() {
-		return "", errors.New("home directory path is not a directory")
-	}
-	return home, nil
-}
-
 func (e *exe) PID() int {
 	return e.pid
 }
@@ -172,7 +150,7 @@ func (e *exe) writeCG(file, content string) error {
 }
 
 func flatten(user, home string, env map[string]string) []string {
-	useless := set.From[string]([]string{"LS_COLORS", "XAUTHORITY", "DISPLAY", "COLORTERM", "MAIL"})
+	useless := set.From[string]([]string{"LS_COLORS", "XAUTHORITY", "DISPLAY", "COLORTERM", "MAIL", "TMPDIR"})
 	result := make([]string, 0, len(env))
 	for k, v := range env {
 		switch {
@@ -188,6 +166,7 @@ func flatten(user, home string, env map[string]string) []string {
 			result = append(result, k+"="+v)
 		}
 	}
+	result = append(result, "TMPDIR="+os.TempDir())
 	return result
 }
 
@@ -216,10 +195,10 @@ func (e *exe) parameters() string {
 }
 
 // prepare will simply run the pledge binary with no arguments - causing it
-// to create the underlying .ape and sandbox.so files in the home directory
+// to create the underlying .ape and sandbox.so files in the tmp directory
 // specified. This is a workaround for some weird issue where creating these
 // files does not work while in a cgroup, as is the case during normal start.
-func (e *exe) prepare(home string, uid, gid uint32) error {
+func (e *exe) prepare(uid, gid uint32) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", e.bin+" -h")
@@ -227,7 +206,7 @@ func (e *exe) prepare(home string, uid, gid uint32) error {
 		Setpgid:    true, // ignore signals sent to nomad
 		Credential: &syscall.Credential{Uid: uid, Gid: gid},
 	}
-	cmd.Env = []string{fmt.Sprintf("HOME=%s", home)}
+	cmd.Env = []string{fmt.Sprintf("TMPDIR=%s", os.TempDir())}
 	return cmd.Run()
 }
 
@@ -237,13 +216,8 @@ func (e *exe) Start(ctx Ctx) error {
 		return fmt.Errorf("failed to start command without user: %w", err)
 	}
 
-	home, err = ensureHome(home, e.env.User, int(uid), int(gid))
-	if err != nil {
-		return fmt.Errorf("failed to start command without home directory: %w", err)
-	}
-
 	// prepare sandbox.so library before launching real command in cgroup
-	if err = e.prepare(home, uid, gid); err != nil {
+	if err = e.prepare(uid, gid); err != nil {
 		return fmt.Errorf("failed to prestart command: %w", err)
 	}
 
