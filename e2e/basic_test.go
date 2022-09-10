@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shoenig/test/must"
 )
@@ -124,6 +125,7 @@ func TestBasic_Passwd(t *testing.T) {
 	must.StrContains(t, runOutput, `finished with status "complete"`)
 
 	// make sure job is failing
+	time.Sleep(3 * time.Second)
 	jobStatus := run(t, ctx, "nomad", "job", "status", "passwd")
 	deadRe := regexp.MustCompile(`group\s+0\s+0\s+0\s+1\s+0\s+0\s+0`)
 	must.RegexMatch(t, deadRe, jobStatus)
