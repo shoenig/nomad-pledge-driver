@@ -170,18 +170,18 @@ func flatten(user, home string, env map[string]string) []string {
 	return result
 }
 
-func (e *exe) parameters() string {
+func (e *exe) parameters() []string {
 	// start with the pledge executable
-	result := []string{e.bin}
+	var result []string
 
 	// append the list of pledges
 	if e.opts.Promises != "" {
-		result = append(result, "-p", "'"+e.opts.Promises+"'")
+		result = append(result, "-p", e.opts.Promises)
 	}
 
 	// append the list of unveils
 	for _, u := range e.opts.Unveil {
-		result = append(result, "-v", "'"+u+"'")
+		result = append(result, "-v", u)
 	}
 
 	// append the user command
@@ -191,7 +191,7 @@ func (e *exe) parameters() string {
 	}
 
 	// craft complete result
-	return strings.Join(result, " ")
+	return result
 }
 
 // prepare will simply run the pledge binary with no arguments - causing it
@@ -201,7 +201,7 @@ func (e *exe) parameters() string {
 func (e *exe) prepare(uid, gid uint32) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", e.bin+" -h")
+	cmd := exec.CommandContext(ctx, e.bin, "-h")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid:    true, // ignore signals sent to nomad
 		Credential: &syscall.Credential{Uid: uid, Gid: gid},
@@ -222,8 +222,7 @@ func (e *exe) Start(ctx Ctx) error {
 	}
 
 	params := e.parameters()
-
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", params)
+	cmd := exec.CommandContext(ctx, e.bin, params...)
 	cmd.Stdout = e.env.Out
 	cmd.Stderr = e.env.Err
 	cmd.Env = flatten(e.env.User, home, e.env.Env)
