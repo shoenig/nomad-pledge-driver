@@ -1,6 +1,6 @@
 job "passwd" {
   datacenters = ["dc1"]
-  type        = "batch"
+  type        = "sysbatch"
 
   group "group" {
     task "cat" {
