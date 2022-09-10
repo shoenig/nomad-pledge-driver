@@ -2,27 +2,11 @@ client {
   enabled = true
 }
 
-plugin_dir = "/home/shoenig/Work/go/pledge-d/output"
+plugin_dir = "/home/shoenig/Work/go/pledge-plugin/output"
 
 plugin "pledge" {
   config {
     pledge_executable = "/opt/bin/pledge-1.7.com"
-
-    #   namespace "*" {
-    #     allow_pledges = "stdio rpath"
-    #   }
-
-    #   namespace "cache" {
-    #     allow_pledges = "stdio rpath inet proc thread"
-    #   }
-
-    #   namespace "databases" {
-    #     allow_pledges = "stdio rpath wpath cpath dpath flock inet dns proc thread"
-    #   }
-
-    #   namespace "admin" {
-    #     allow_pledges = "*"
-    #   }
   }
 }
 
