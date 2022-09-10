@@ -53,6 +53,21 @@ The plugin should be placed in the `plugin_dir` configured by the Nomad agent, p
 
 You'll also need the `pledge` executable that powers the plugin sandboxing. Download the `pledge` executable from https://justine.lol/pledge/ and install it somewhere. The plugin configuration lets you specify where the path to the pledge executable.
 
+### Assimilation
+
+The `pledge.com` executable must be "assimilated" to the architecture of the system by running it with the `--assimilate` flag.
+
+```shell
+pledge.com --assimilate
+```
+
+After assimilation the file type will be recognized, e.g.
+
+```shell
+➜ file ./pledge-1.7.com
+./pledge-1.7.com: ELF 64-bit LSB executable, x86-64, version 1 (FreeBSD), for OpenBSD, statically linked, no section header
+```
+
 ### Plugin Configuration
 
 Currently there is only one configuration option for this plugin, which is to specify the path of the `pledge` executable.
