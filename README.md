@@ -23,16 +23,16 @@ This example uses `curl` to fetch `example.com`, with the minimal set of promise
 ```hcl
 job "curl" {
   datacenters = ["dc1"]
-  type        = "sysbatch"
+  type        = "batch"
 
   group "group" {
     task "curl" {
       driver = "pledge"
       user   = "nobody"
       config {
-        command = "curl"
-        args    = ["example.com"]
-        pledges = "stdio rpath inet unix sendfd dns"
+        command  = "curl"
+        args     = ["example.com"]
+        promises = "stdio rpath inet dns sendfd"
       }
     }
   }
@@ -80,7 +80,7 @@ Currently there is only one configuration option for this plugin, which is to sp
 ```hcl
 plugin "pledge" {
   config {
-    pledge_executable = "/opt/bin/pledge-1.6.com"
+    pledge_executable = "/opt/bin/pledge-1.8.com"
   }
 }
 ```
@@ -105,7 +105,7 @@ task "curl" {
   config {
     command = "curl"
     args    = ["example.com"]
-    pledges = "stdio rpath inet unix sendfd dns"
+    pledges = "stdio rpath inet dns sendfd"
   }
 }
 ```
