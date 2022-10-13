@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -11,20 +12,32 @@ import (
 	"github.com/shoenig/test/must"
 )
 
+func pause() {
+	if ci := os.Getenv("CI"); ci == "" {
+		time.Sleep(500 * time.Millisecond)
+	}
+	time.Sleep(2 * time.Second)
+}
+
 func setup(t *testing.T) context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(func() {
 		run(t, ctx, "nomad", "system", "gc")
 		cancel()
 	})
+	pause()
 	return ctx
 }
 
 func run(t *testing.T, ctx context.Context, command string, args ...string) string {
+	t.Log("RUN", "command:", command, "args:", args)
 	cmd := exec.CommandContext(ctx, command, args...)
 	b, err := cmd.CombinedOutput()
 	output := strings.TrimSpace(string(b))
-	must.NoError(t, err, must.Sprint("output", output))
+	if err != nil {
+		t.Log("ERR:", err)
+		t.Log("OUT:", output)
+	}
 	return output
 }
 
@@ -41,20 +54,20 @@ func TestBasic_Startup(t *testing.T) {
 	must.RegexMatch(t, pledgeRe, status)
 }
 
-func allocFromJobRun(t *testing.T, s string) string {
-	re := regexp.MustCompile(`Allocation "([[:xdigit:]]+)" created:`)
+func allocFromJobStatus(t *testing.T, s string) string {
+	re := regexp.MustCompile(`([[:xdigit:]]+)\s+([[:xdigit:]]+)\s+group`)
 	matches := re.FindStringSubmatch(s)
-	must.Len(t, 2, matches, must.Sprint("output", s))
+	must.Len(t, 3, matches, must.Sprint("regex results", matches))
 	return matches[1]
 }
 
 func TestBasic_Env(t *testing.T) {
 	ctx := setup(t)
 
-	runOutput := run(t, ctx, "nomad", "job", "run", "../hack/env.nomad")
-	must.StrContains(t, runOutput, `finished with status "complete"`)
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/env.nomad")
+	statusOutput := run(t, ctx, "nomad", "job", "status", "env")
 
-	alloc := allocFromJobRun(t, runOutput)
+	alloc := allocFromJobStatus(t, statusOutput)
 	containsAllocEnvRe := regexp.MustCompile(`NOMAD_SHORT_ALLOC_ID=` + alloc)
 
 	logs := run(t, ctx, "nomad", "alloc", "logs", alloc)
@@ -64,10 +77,10 @@ func TestBasic_Env(t *testing.T) {
 func TestBasic_cURL(t *testing.T) {
 	ctx := setup(t)
 
-	runOutput := run(t, ctx, "nomad", "job", "run", "../hack/curl.nomad")
-	must.StrContains(t, runOutput, `finished with status "complete"`)
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/curl.nomad")
+	statusOutput := run(t, ctx, "nomad", "job", "status", "curl")
 
-	alloc := allocFromJobRun(t, runOutput)
+	alloc := allocFromJobStatus(t, statusOutput)
 	logs := run(t, ctx, "nomad", "alloc", "logs", alloc)
 	must.StrContains(t, logs, `<title>Example Domain</title>`)
 }
@@ -75,8 +88,7 @@ func TestBasic_cURL(t *testing.T) {
 func TestBasic_Sleep(t *testing.T) {
 	ctx := setup(t)
 
-	runOutput := run(t, ctx, "nomad", "job", "run", "../hack/sleep.nomad")
-	must.StrContains(t, runOutput, `finished with status "complete"`)
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/sleep.nomad")
 
 	// no log output, make sure jbo is running
 	jobStatus := run(t, ctx, "nomad", "job", "status", "sleep")
@@ -96,8 +108,7 @@ func TestBasic_Sleep(t *testing.T) {
 func TestBasic_HTTP(t *testing.T) {
 	ctx := setup(t)
 
-	runOutput := run(t, ctx, "nomad", "job", "run", "../hack/http.nomad")
-	must.StrContains(t, runOutput, `finished with status "complete"`)
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/http.nomad")
 
 	// make sure job is running
 	jobStatus := run(t, ctx, "nomad", "job", "status", "http")
@@ -121,11 +132,10 @@ func TestBasic_HTTP(t *testing.T) {
 func TestBasic_Passwd(t *testing.T) {
 	ctx := setup(t)
 
-	runOutput := run(t, ctx, "nomad", "job", "run", "../hack/passwd.nomad")
-	must.StrContains(t, runOutput, `finished with status "complete"`)
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/passwd.nomad")
 
 	// make sure job is failing
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 	jobStatus := run(t, ctx, "nomad", "job", "status", "passwd")
 	deadRe := regexp.MustCompile(`group\s+0\s+0\s+0\s+1\s+0\s+0\s+0`)
 	must.RegexMatch(t, deadRe, jobStatus)
