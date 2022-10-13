@@ -6,7 +6,7 @@ plugin_dir = "/home/shoenig/Work/go/pledge-plugin/output"
 
 plugin "pledge" {
   config {
-    pledge_executable = "/opt/bin/pledge-1.7.com"
+    pledge_executable = "/opt/bin/pledge-1.8.com"
   }
 }
 

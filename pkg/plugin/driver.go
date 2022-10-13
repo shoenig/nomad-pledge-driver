@@ -125,44 +125,41 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 	healthState := drivers.HealthStateHealthy
 	healthDescription := drivers.DriverHealthy
 
+	// inspect pledge.com binary path
 	abs, err := filepath.Abs(p.config.PledgeExecutable)
 	if err != nil {
-		return &drivers.Fingerprint{
-			Health:            drivers.HealthStateUndetected,
-			HealthDescription: fmt.Sprintf("failed to detect absolute path of pledge executable: %s", err),
-		}
+		return failure(drivers.HealthStateUndetected, "failed to detect absolute path of pledge executable")
 	}
 
-	if _, err = os.Stat(abs); err != nil {
-		if os.IsNotExist(err) {
-			healthState = drivers.HealthStateUndetected
-			healthDescription = "pledge executable not found"
-		} else {
-			healthState = drivers.HealthStateUnhealthy
-			healthDescription = "failed to stat pledge executable"
-		}
-	}
-
-	promise := p.detect("pledge")
-	if !promise {
-		healthState = drivers.HealthStateUnhealthy
-		healthDescription = "kernel too old"
-	}
-
-	unveil := p.detect("unveil")
-	if !unveil {
-		healthState = drivers.HealthStateUnhealthy
-		healthDescription = "kernel landlock not enabled"
+	// inspect pledge.com binary
+	fi, err := os.Stat(abs)
+	switch {
+	case os.IsNotExist(err):
+		return failure(drivers.HealthStateUndetected, "pledge executable not found")
+	case err != nil:
+		return failure(drivers.HealthStateUnhealthy, "failed to stat pledge executable")
+	case fi.Mode()&0o111 == 0:
+		return failure(drivers.HealthStateUnhealthy, "pledge binary is not executable")
+	case !p.detect("pledge"):
+		return failure(drivers.HealthStateUnhealthy, "kernel too old")
+	case !p.detect("unveil"):
+		return failure(drivers.HealthStateHealthy, "kernel landlock not enabled")
 	}
 
 	return &drivers.Fingerprint{
 		Health:            healthState,
 		HealthDescription: healthDescription,
 		Attributes: map[string]*structs.Attribute{
-			"driver.pledge.abs":    structs.NewStringAttribute(abs),
-			"driver.pledge.os":     structs.NewStringAttribute(runtime.GOOS),
-			"driver.pledge.unveil": structs.NewBoolAttribute(unveil),
+			"driver.pledge.abs": structs.NewStringAttribute(abs),
+			"driver.pledge.os":  structs.NewStringAttribute(runtime.GOOS),
 		},
+	}
+}
+
+func failure(state drivers.HealthState, desc string) *drivers.Fingerprint {
+	return &drivers.Fingerprint{
+		Health:            state,
+		HealthDescription: desc,
 	}
 }
 
