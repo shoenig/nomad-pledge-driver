@@ -6,7 +6,7 @@
 
 *Security through SECCOMP sorcery*
 
-### :warning: Experimental :warning:
+#### :warning: Experimental :warning:
 
 This task driver is experimental. It might work, it might crash, or it might do nothing at all.
 Changes to the driver implementation and how it is configured should be expected.
@@ -14,11 +14,15 @@ Use with caution, and certainly not in any mission-critical Nomad jobs.
 
 ### Features
 
-- Sandbox applications by *restricting syscalls* they are able to make.
+- Sandbox applications by **restricting syscalls** they are able to make (via _promises_)
+- Sandbox applications by **allow-listing filepaths** they are allowed to access (via _unveil_)
+- Sandbox applications by **isolating processes** using modern Linux cgroups (via _cgroups v2_)
 
 ### Examples
 
-This example uses `curl` to fetch `example.com`, with the minimal set of promises for making the request and outputing to standard out.
+The example below uses `curl` to fetch `example.com`, with the minimal set of promises to make a request.
+
+More complex examples in the [hack](hack) directory.
 
 ```hcl
 job "curl" {
@@ -62,7 +66,7 @@ sudo mkdir -p /opt/bin
 curl -L -o /opt/bin/pledge-1.8.com https://justine.lol/pledge/pledge-1.8.com
 ```
 
-**optional** It is very convenient to bless the pledge executable with the `cap_net_bind_service`
+:point_right: **optional** It is very convenient to bless the pledge executable with the `cap_net_bind_service`
 Linux capability. This will enable Nomad tasks using the pledge driver to bind to privileged
 ports (e.g. below 1024).
 
