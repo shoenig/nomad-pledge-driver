@@ -71,7 +71,7 @@ sudo setcap cap_net_bind_service+eip /opt/bin/pledge-1.8.com
 ```
 
 The plugin will expose the `driver.pledge.cap.net_bind` attribute indicating whether
-the `cap_net_bind_service` capability has beet set on the pledge.com executable.
+the `cap_net_bind_service` capability has been set on the `pledge-1.x.com` executable.
 
 ### Plugin Configuration
 
