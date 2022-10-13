@@ -15,7 +15,7 @@ job "ignore" {
 
       template {
         destination = "local/ignore.py"
-        data = <<EOH
+        data        = <<EOH
 import signal
 import os
 import time
