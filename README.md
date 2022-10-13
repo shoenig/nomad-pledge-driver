@@ -89,7 +89,9 @@ Note: in these examples the driver plugin is named `pledge`, and the utility exe
 
 ### Task Configuration
 
-Tasks need to specify which **pledges** they require in order to run.
+Tasks need to specify which **promises** they require in order to run.
+
+Tasks also need to **unveil** the filesystem paths needed to run.
 
 For more information about which pledges are available and how this mechanism works, visit https://justine.lol/pledge/
 
@@ -97,15 +99,32 @@ If no `user` is specified for the task, the pledge plugin will use the `nobody` 
 
 - `command`: The executable to run
 - `args`: The arguments to pass to executable
-- `pledges`: The set of pledges needed for the executable to run
+- `promises`: The set of promises needed for the executable to run
+- `unveil`: The set of system filepaths to allow the task to access, and with what permission
+- `importance`: One of `lowest`, `low`, `normal`, `high`, `highest` (default is `normal`)
 
 ```hcl
-task "curl" {
+# see hack/http.nomad for complete python http.server example
+task "task" {
   driver = "pledge"
+  user   = "nobody"
   config {
-    command = "curl"
-    args    = ["example.com"]
-    pledges = "stdio rpath inet dns sendfd"
+    command    = "python3"
+    args       = ["-m", "http.server", "${NOMAD_PORT_http}", "--directory", "${NOMAD_TASK_DIR}"]
+    promises   = "stdio rpath inet"
+    unveil     = ["r:/etc/mime.types", "r:${NOMAD_TASK_DIR}"]
+    importance = "low"
+  }
+
+  template {
+    destination = "local/index.html"
+    data        = <<EOH
+<!doctype html>
+<html>
+  <title>example</title>
+  <body><p>Hello, friend!</p></body>
+</html>
+EOH
   }
 }
 ```
