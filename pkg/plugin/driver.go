@@ -146,12 +146,17 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 		return failure(drivers.HealthStateHealthy, "kernel landlock not enabled")
 	}
 
+	// inspect cap_net_bind_service configuration
+	// e.g. sudo setcap cap_net_bind_service+eip /opt/bin/pledge-1.8.com
+	netCap := p.getcap("cap_net_bind_service")
+
 	return &drivers.Fingerprint{
 		Health:            healthState,
 		HealthDescription: healthDescription,
 		Attributes: map[string]*structs.Attribute{
-			"driver.pledge.abs": structs.NewStringAttribute(abs),
-			"driver.pledge.os":  structs.NewStringAttribute(runtime.GOOS),
+			"driver.pledge.abs":          structs.NewStringAttribute(abs),
+			"driver.pledge.os":           structs.NewStringAttribute(runtime.GOOS),
+			"driver.pledge.cap.net_bind": structs.NewBoolAttribute(netCap),
 		},
 	}
 }
@@ -161,6 +166,16 @@ func failure(state drivers.HealthState, desc string) *drivers.Fingerprint {
 		Health:            state,
 		HealthDescription: desc,
 	}
+}
+
+func (p *PledgeDriver) getcap(name string) bool {
+	cmd := exec.Command("getcap", p.config.PledgeExecutable)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return false
+	}
+	exp := fmt.Sprintf("%s=eip", name) // todo: robustness
+	return strings.Contains(string(out), exp)
 }
 
 func (p *PledgeDriver) detect(param string) bool {

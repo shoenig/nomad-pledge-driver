@@ -41,10 +41,12 @@ job "curl" {
 
 ### Building
 
-The `nomad-pledge-driver` plugin is written in Go. It can be built using the normal Go toolchain steps, e.g.
+The `nomad-pledge-driver` plugin is written in Go. It can be built using the normal Go toolchain steps, but
+the Makefile contains a `dev` target to make things easy. The compiled binary will appear in the `output/`
+directory.
 
 ```shell
-go build
+make dev
 ```
 
 ### Installing 
@@ -54,6 +56,22 @@ The plugin should be placed in the `plugin_dir` configured by the Nomad agent, p
 You'll also need the `pledge` executable (1.8 or higher) that powers the plugin sandboxing.
 Download the `pledge` executable from https://justine.lol/pledge/ and install it somewhere.
 The plugin configuration lets you specify where the path to the pledge executable.
+
+```shell
+sudo mkdir -p /opt/bin
+curl -L -o /opt/bin/pledge-1.8.com https://justine.lol/pledge/pledge-1.8.com
+```
+
+**optional** It is very convenient to bless the pledge executable with the `cap_net_bind_service`
+Linux capability. This will enable Nomad tasks using the pledge driver to bind to privileged
+ports (e.g. below 1024).
+
+```shell
+sudo setcap cap_net_bind_service+eip /opt/bin/pledge-1.8.com
+```
+
+The plugin will expose the `driver.pledge.cap.net_bind` attribute indicating whether
+the `cap_net_bind_service` capability has beet set on the pledge.com executable.
 
 ### Plugin Configuration
 
