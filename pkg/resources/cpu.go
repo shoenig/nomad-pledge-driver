@@ -8,40 +8,40 @@ import (
 )
 
 type TrackCPU struct {
-	prevTime       time.Time
-	prevUserUsec   uint64
-	prevSystemUsec uint64
-	prevTotalUsec  uint64
+	prevTime   time.Time
+	prevUser   MicroSecond
+	prevSystem MicroSecond
+	prevTotal  MicroSecond
 }
 
 // Percent returns the percentage of time spent in user, system, total CPU usage.
-func (t *TrackCPU) Percent(userUsec, systemUsec, totalUsec uint64) (float64, float64, float64) {
+func (t *TrackCPU) Percent(user, system, total MicroSecond) (Percent, Percent, Percent) {
 	now := time.Now()
 
-	if t.prevUserUsec == 0 && t.prevSystemUsec == 0 {
-		t.prevUserUsec = userUsec
-		t.prevSystemUsec = systemUsec
-		t.prevTotalUsec = totalUsec
+	if t.prevUser == 0 && t.prevSystem == 0 {
+		t.prevUser = user
+		t.prevSystem = system
+		t.prevTotal = total
 		return 0.0, 0.0, 0.0
 	}
 
 	elapsed := now.Sub(t.prevTime).Microseconds()
-	userPct := t.percent(t.prevUserUsec, userUsec, elapsed)
-	systemPct := t.percent(t.prevSystemUsec, systemUsec, elapsed)
-	totalPct := t.percent(t.prevTotalUsec, totalUsec, elapsed)
-	t.prevUserUsec = userUsec
-	t.prevSystemUsec = systemUsec
-	t.prevTotalUsec = totalUsec
+	userPct := t.percent(t.prevUser, user, elapsed)
+	systemPct := t.percent(t.prevSystem, system, elapsed)
+	totalPct := t.percent(t.prevTotal, total, elapsed)
+	t.prevUser = user
+	t.prevSystem = system
+	t.prevTotal = total
 	t.prevTime = now
 	return userPct, systemPct, totalPct
 }
 
-func (t *TrackCPU) percent(t1, t2 uint64, elapsed int64) float64 {
+func (t *TrackCPU) percent(t1, t2 MicroSecond, elapsed int64) Percent {
 	delta := t2 - t1
 	if elapsed <= 0 || delta <= 0.0 {
 		return 0.0
 	}
-	return (float64(delta) / float64(elapsed)) * 100.0
+	return Percent(float64(delta)/float64(elapsed)) * 100.0
 }
 
 type Specs struct {
