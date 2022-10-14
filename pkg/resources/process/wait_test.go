@@ -21,7 +21,7 @@ func TestOrphan_Wait(t *testing.T) {
 	waiter := WaitOnOrphan(cmd.Process.Pid)
 	exit := waiter.Wait()
 
-	must.Greater(t, time.Since(start), 100*time.Millisecond)
+	must.Greater(t, 100*time.Millisecond, time.Since(start))
 	must.NoError(t, exit.Err)
 	must.Zero(t, exit.Code)
 }

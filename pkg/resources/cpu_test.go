@@ -9,6 +9,6 @@ import (
 func Test_Get(t *testing.T) {
 	specs, err := Get()
 	must.NoError(t, err)
-	must.Greater(t, specs.MHz, 0)
-	must.Greater(t, specs.Cores, 0)
+	must.Positive(t, specs.MHz)
+	must.Positive(t, specs.Cores)
 }
