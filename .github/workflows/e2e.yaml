@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: magnetikonline/action-golang-cache@v3
         with:
           go-version: ${{env.GO_VERSION}}
       - name: Install Nomad
@@ -40,4 +40,4 @@ jobs:
           nomad node status -self -verbose
       - name: Basic Tests
         run: |
-          go test -count=1 -v ./e2e
+          go test -tags=e2e -count=1 -v ./e2e
