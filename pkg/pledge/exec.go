@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -286,18 +287,14 @@ func (e *exe) Stats() resources.Utilization {
 	swapCurrent, _ := strconv.Atoi(swapCurrentS)
 
 	memStatS, _ := e.readCG("memory.stat")
-	memCache := extract(memStatS)["file"]
+	memCache := extractRe(memStatS, memCacheRe)
 
 	cpuStatsS, _ := e.readCG("cpu.stat")
-	cpuStatsM := extract(cpuStatsS)
-
-	userUsec := cpuStatsM["user_usec"]
-	systemUsec := cpuStatsM["system_usec"]
-	totalUsec := cpuStatsM["usage_usec"]
-	userPct, systemPct, totalPct := e.cpu.Percent(userUsec, systemUsec, totalUsec)
+	usr, system, total := extractCPU(cpuStatsS)
+	userPct, systemPct, totalPct := e.cpu.Percent(usr, system, total)
 
 	specs, _ := resources.Get()
-	ticks := (.01 * totalPct) * float64(specs.Ticks()/specs.Cores)
+	ticks := (.01 * totalPct) * resources.Percent(specs.Ticks()/specs.Cores)
 
 	return resources.Utilization{
 		// memory stats
@@ -306,26 +303,46 @@ func (e *exe) Stats() resources.Utilization {
 		Cache:  memCache,
 
 		// cpu stats
-		System:  userPct,
-		User:    systemPct,
+		System:  systemPct,
+		User:    userPct,
 		Percent: totalPct,
 		Ticks:   ticks,
 	}
 }
 
-// todo just regex the fields we want
-// todo also get the throttle timings
-func extract(content string) map[string]uint64 {
-	m := make(map[string]uint64)
-	scanner := bufio.NewScanner(strings.NewReader(content))
+var (
+	memCacheRe = regexp.MustCompile(`file\s+(\d+)`)
+)
+
+func extractRe(s string, re *regexp.Regexp) uint64 {
+	matches := memCacheRe.FindStringSubmatch(s)
+	if len(matches) != 2 {
+		return 0
+	}
+	value, err := strconv.ParseInt(matches[1], 10, 64)
+	if err != nil {
+		return 0
+	}
+	return uint64(value)
+}
+
+func extractCPU(s string) (user, system, total resources.MicroSecond) {
+	read := func(line string, i *resources.MicroSecond) {
+		num := line[strings.Index(line, " ")+1:]
+		v, _ := strconv.ParseInt(num, 10, 64)
+		*i = resources.MicroSecond(v)
+	}
+	scanner := bufio.NewScanner(strings.NewReader(s))
 	for scanner.Scan() {
 		text := scanner.Text()
-		fields := strings.Fields(text)
-		if len(fields) == 2 {
-			if value, err := strconv.Atoi(fields[1]); err == nil {
-				m[fields[0]] = uint64(value)
-			}
+		switch {
+		case strings.HasPrefix(text, "user_usec"):
+			read(text, &user)
+		case strings.HasPrefix(text, "system_usec"):
+			read(text, &system)
+		case strings.HasPrefix(text, "usage_usec"):
+			read(text, &total)
 		}
 	}
-	return m
+	return
 }
