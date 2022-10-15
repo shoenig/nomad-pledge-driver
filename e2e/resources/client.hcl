@@ -2,7 +2,7 @@
 
 data_dir  = "/opt/nomad/data"
 bind_addr = "0.0.0.0"
-plugin_dir = "/opt/nomad/plugins"
+plugin_dir = "/tmp/plugins"
 
 server {
   enabled          = true

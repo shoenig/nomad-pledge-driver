@@ -2,7 +2,7 @@ client {
   enabled = true
 }
 
-plugin_dir = "/home/shoenig/Work/go/pledge-plugin/output"
+plugin_dir = "/tmp/plugins"
 
 plugin "pledge" {
   config {
