@@ -26,8 +26,6 @@ jobs:
           mkdir /opt/bin
           curl -L -o /opt/bin/${PLEDGE_VERSION} https://github.com/shoenig/nomad-pledge-driver/releases/download/${PLEDGE_VERSION}/${PLEDGE_VERSION}
           chmod +x /opt/bin/${PLEDGE_VERSION}
-          mkdir /opt/nomad/plugins
-          cp output/pledge /opt/nomad/plugins/pledge
           sudo cp e2e/resources/client.hcl /etc/nomad.d/nomad.hcl
       - name: Start Nomad
         run: |

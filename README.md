@@ -142,6 +142,18 @@ Otherwise feel free to file an issue!
 
 The `nomad-pledge-driver` plugin is currently under active development - anything may change at a moments notice!
 
+#### hacking
+
+The included Makefile includes helpful targets for hacking on the pledge plugin.
+
+To simply compile, run `make dev`. The output will go into `/tmp/plugins`.
+
+To start Nomad with the plugin, run `make run`. Under the hood this is using the `hack/client.hcl` Client
+config file, along with `-dev` mode defaults. You should be able to run jobs making use of `pledge` driver
+when launching Nomad this way.
+
+There are example jobs in the [hack/](hack) directory.
+
 ### License
 
 The `noamd-pledge-driver` task driver plugin is made open source under the [MPL-2.0](LICENSE) license.
