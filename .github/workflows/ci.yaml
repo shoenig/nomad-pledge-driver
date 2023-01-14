@@ -1,7 +1,6 @@
 name: Run CI Tests
 on: [push]
 env:
-  GO_VERSION: ~1.19
   PLEDGE_VERSION: pledge-1.8.com
   PLEDGE_PATH: /opt/bin/pledge-1.8.com
 jobs:
@@ -13,9 +12,9 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v3
-      - uses: magnetikonline/action-golang-cache@v3
+      - uses: hashicorp/setup-golang@v1
         with:
-          go-version: ${{env.GO_VERSION}}
+          version-file: go.mod
       - name: Run Go Vet
         run: |
           make vet
