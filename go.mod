@@ -5,9 +5,9 @@ go 1.19
 require (
 	github.com/hashicorp/go-hclog v1.4.0
 	github.com/hashicorp/go-set v0.1.6
-	github.com/hashicorp/nomad v1.4.1
-	github.com/shoenig/test v0.4.0
-	golang.org/x/sys v0.0.0-20221013171732-95e765b1cc43
+	github.com/hashicorp/nomad v1.4.3
+	github.com/shoenig/test v0.4.3
+	golang.org/x/sys v0.1.0
 	oss.indeed.com/go/libtime v1.6.0
 )
 
@@ -22,6 +22,7 @@ require (
 	github.com/frankban/quicktest v1.14.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/go-test/deep v1.0.3 // indirect
 	github.com/gojuno/minimock/v3 v3.0.10 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -29,7 +30,7 @@ require (
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
-	github.com/hashicorp/consul/api v1.15.2 // indirect
+	github.com/hashicorp/consul/api v1.15.3 // indirect
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
