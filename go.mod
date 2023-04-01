@@ -3,7 +3,7 @@ module github.com/shoenig/nomad-pledge
 go 1.19
 
 require (
-	github.com/hashicorp/go-hclog v1.4.0
+	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-set v0.1.7
 	github.com/hashicorp/nomad v1.4.3
 	github.com/shoenig/test v0.6.1
