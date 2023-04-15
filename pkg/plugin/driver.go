@@ -34,7 +34,7 @@ type PledgeDriver struct {
 	config *Config
 
 	// driverConfig is the driver-client configuration from Nomad
-	driverConfig *base.ClientDriverConfig
+	// driverConfig *base.ClientDriverConfig
 
 	// tasks is the in-memory datastore mapping IDs to handles
 	tasks task.Store
@@ -88,7 +88,6 @@ func (p *PledgeDriver) SetConfig(c *base.Config) error {
 
 func (p *PledgeDriver) TaskConfigSchema() (*hclspec.Spec, error) {
 	return taskConfigSpec, nil
-
 }
 
 func (p *PledgeDriver) Capabilities() (*drivers.Capabilities, error) {
@@ -266,11 +265,11 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 // coming from Nomad. Hopefully this should never happen because the pledge driver
 // runs independently from the Nomad Client process.
 func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
-	p.logger.Warn("recovering task", "id", handle.Config.ID)
-
 	if handle == nil {
 		return errors.New("failed to recover task, handle is nil")
 	}
+
+	p.logger.Warn("recovering task", "id", handle.Config.ID)
 
 	if _, exists := p.tasks.Get(handle.Config.ID); exists {
 		return nil // nothing to do
