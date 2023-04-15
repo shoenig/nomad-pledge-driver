@@ -4,6 +4,14 @@ env:
   PLEDGE_VERSION: pledge-1.8.com
   PLEDGE_PATH: /opt/bin/pledge-1.8.com
 jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.52.2
+          skip-cache: true
   run-tests:
     strategy:
       fail-fast: true
