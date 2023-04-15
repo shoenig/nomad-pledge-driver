@@ -146,3 +146,16 @@ func TestBasic_Passwd(t *testing.T) {
 	stopOutput := run(t, ctx, "nomad", "job", "stop", "-purge", "passwd")
 	must.StrContains(t, stopOutput, `finished with status "complete"`)
 }
+
+func TestBasic_Cgroup(t *testing.T) {
+	ctx := setup(t)
+
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/cgroup.hcl")
+	statusOutput := run(t, ctx, "nomad", "job", "status", "cgroup")
+
+	alloc := allocFromJobStatus(t, statusOutput)
+	cgroupRe := regexp.MustCompile(`0::/nomad\.slice/` + alloc + `.+\.cat\.scope`)
+
+	logs := run(t, ctx, "nomad", "alloc", "logs", alloc)
+	must.RegexMatch(t, cgroupRe, logs)
+}

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-set"
 	"github.com/shoenig/nomad-pledge/pkg/resources"
 	"github.com/shoenig/nomad-pledge/pkg/resources/process"
+	"golang.org/x/sys/unix"
 )
 
 type Ctx = context.Context
@@ -132,6 +133,14 @@ func (e *exe) PID() int {
 	return e.pid
 }
 
+func (e *exe) openCG() (int, func(), error) {
+	fd, err := unix.Open(e.env.Cgroup, unix.O_PATH, 0)
+	cleanup := func() {
+		_ = unix.Close(fd)
+	}
+	return fd, cleanup, err
+}
+
 func (e *exe) readCG(file string) (string, error) {
 	file = filepath.Join(e.env.Cgroup, file)
 	b, err := os.ReadFile(file)
@@ -151,7 +160,7 @@ func (e *exe) writeCG(file, content string) error {
 }
 
 func flatten(user, home string, env map[string]string) []string {
-	useless := set.From[string]([]string{"LS_COLORS", "XAUTHORITY", "DISPLAY", "COLORTERM", "MAIL", "TMPDIR"})
+	useless := set.From([]string{"LS_COLORS", "XAUTHORITY", "DISPLAY", "COLORTERM", "MAIL", "TMPDIR"})
 	result := make([]string, 0, len(env))
 	for k, v := range env {
 		switch {
@@ -222,6 +231,11 @@ func (e *exe) Start(ctx Ctx) error {
 		return fmt.Errorf("failed to prestart command: %w", err)
 	}
 
+	fd, cleanup, err := e.openCG()
+	if err != nil {
+		return fmt.Errorf("failed to open cgroup for descriptor")
+	}
+
 	params := e.parameters()
 	cmd := exec.CommandContext(ctx, e.bin, params...)
 	cmd.Stdout = e.env.Out
@@ -229,13 +243,18 @@ func (e *exe) Start(ctx Ctx) error {
 	cmd.Env = flatten(e.env.User, home, e.env.Env)
 	cmd.Dir = e.env.Dir
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid:    true, // ignore signals sent to nomad
-		Credential: &syscall.Credential{Uid: uid, Gid: gid},
+		UseCgroupFD: true, // clone directly into cgroup
+		CgroupFD:    fd,   // cgroup file descriptor
+		Setpgid:     true, // ignore signals sent to nomad
+		Credential:  &syscall.Credential{Uid: uid, Gid: gid},
 	}
 
 	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
+
+	// close cgroup descriptor
+	cleanup()
 
 	e.pid = cmd.Process.Pid
 	e.waiter = process.WaitOnChild(cmd.Process)
@@ -248,8 +267,7 @@ func (e *exe) Start(ctx Ctx) error {
 
 // isolate this process to the cgroup for this task
 func (e *exe) isolate() error {
-	err := e.writeCG("cgroup.procs", strconv.Itoa(e.PID()))
-	_ = e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
+	err := e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
 	return err
 }
 
