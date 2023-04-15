@@ -35,8 +35,8 @@ var acceptable = set.From([]string{
 func checkPromises(s string) (string, error) {
 	wanted := set.From(strings.Fields(s))
 	unknown := wanted.Difference(acceptable)
-	list := strings.Join(wanted.List(), " ")
-	reject := strings.Join(unknown.List(), " ")
+	list := strings.Join(wanted.Slice(), " ")
+	reject := strings.Join(unknown.Slice(), " ")
 	switch len(reject) {
 	case 0:
 		return list, nil
