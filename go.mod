@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/hashicorp/go-hclog v1.5.0
-	github.com/hashicorp/go-set v0.1.10
+	github.com/hashicorp/go-set v0.1.12
 	github.com/hashicorp/nomad v1.5.3
 	github.com/shoenig/test v0.6.4
 	golang.org/x/sys v0.7.0
