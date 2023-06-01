@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-set v0.1.12
-	github.com/hashicorp/nomad v1.5.3
+	github.com/hashicorp/nomad v1.5.6
 	github.com/shoenig/test v0.6.4
 	golang.org/x/sys v0.7.0
 	oss.indeed.com/go/libtime v1.6.0
@@ -31,7 +31,7 @@ require (
 	github.com/hashicorp/consul/api v1.20.0 // indirect
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-bexpr v0.1.11 // indirect
+	github.com/hashicorp/go-bexpr v0.1.12 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-immutable-radix/v2 v2.0.0 // indirect
