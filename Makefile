@@ -27,3 +27,9 @@ run: dev
 run:
 	@echo "==> Run in dev mode"
 	@sudo nomad agent -dev -config=hack/client.hcl
+
+.PHONY: release
+release:
+	@echo "==> Create release"
+	envy exec gh-release goreleaser release --clean
+	$(MAKE) clean
