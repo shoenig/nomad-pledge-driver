@@ -45,9 +45,11 @@ func New(bin string, env *Environment, opts *Options) Exec {
 	}
 }
 
-func Recover(pid int) Exec {
+func Recover(pid int, env *Environment) Exec {
 	return &exe{
 		pid:    pid,
+		env:    env,
+		opts:   nil, // necessary?
 		waiter: process.WaitOnOrphan(pid),
 		signal: process.Interrupts(pid),
 		cpu:    new(resources.TrackCPU),
