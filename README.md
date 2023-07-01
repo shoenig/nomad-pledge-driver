@@ -1,6 +1,7 @@
 # nomad-pledge-driver
 
 ![GitHub](https://img.shields.io/github/license/shoenig/nomad-pledge-driver?style=flat-square)
+[![Run E2E Tests](https://github.com/shoenig/nomad-pledge-driver/actions/workflows/e2e.yaml/badge.svg)](https://github.com/shoenig/nomad-pledge-driver/actions/workflows/e2e.yaml)
 
 `nomad-pledge-driver` is a Nomad task driver based on the `pledge` [utility for Linux](https://justine.lol/pledge/) by Justine Tunney.
 
@@ -10,7 +11,7 @@
 
 This task driver is experimental. It might work, it might crash, or it might do nothing at all.
 Changes to the driver implementation and how it is configured should be expected.
-Use with caution, and certainly not in any mission-critical Nomad jobs.
+Use with caution.
 
 ### Features
 
@@ -37,6 +38,7 @@ job "curl" {
         command  = "curl"
         args     = ["example.com"]
         promises = "stdio rpath inet dns sendfd"
+        unveil     = ["r:${NOMAD_TASK_DIR}"]
       }
     }
   }
