@@ -66,7 +66,7 @@ func allocFromJobStatus(t *testing.T, s string) string {
 func TestBasic_Env(t *testing.T) {
 	ctx := setup(t)
 
-	_ = run(t, ctx, "nomad", "job", "run", "../hack/env.nomad")
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/env.hcl")
 	statusOutput := run(t, ctx, "nomad", "job", "status", "env")
 
 	alloc := allocFromJobStatus(t, statusOutput)
@@ -79,7 +79,7 @@ func TestBasic_Env(t *testing.T) {
 func TestBasic_cURL(t *testing.T) {
 	ctx := setup(t)
 
-	_ = run(t, ctx, "nomad", "job", "run", "../hack/curl.nomad")
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/curl.hcl")
 	statusOutput := run(t, ctx, "nomad", "job", "status", "curl")
 
 	alloc := allocFromJobStatus(t, statusOutput)
@@ -90,7 +90,7 @@ func TestBasic_cURL(t *testing.T) {
 func TestBasic_Sleep(t *testing.T) {
 	ctx := setup(t)
 
-	_ = run(t, ctx, "nomad", "job", "run", "../hack/sleep.nomad")
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/sleep.hcl")
 
 	// no log output, make sure jbo is running
 	jobStatus := run(t, ctx, "nomad", "job", "status", "sleep")
@@ -110,7 +110,7 @@ func TestBasic_Sleep(t *testing.T) {
 func TestBasic_HTTP(t *testing.T) {
 	ctx := setup(t)
 
-	_ = run(t, ctx, "nomad", "job", "run", "../hack/http.nomad")
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/http.hcl")
 
 	// make sure job is running
 	jobStatus := run(t, ctx, "nomad", "job", "status", "http")
@@ -134,7 +134,7 @@ func TestBasic_HTTP(t *testing.T) {
 func TestBasic_Passwd(t *testing.T) {
 	ctx := setup(t)
 
-	_ = run(t, ctx, "nomad", "job", "run", "../hack/passwd.nomad")
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/passwd.hcl")
 
 	// make sure job is failing
 	time.Sleep(5 * time.Second)
