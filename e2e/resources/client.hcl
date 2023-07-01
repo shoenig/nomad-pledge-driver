@@ -1,7 +1,7 @@
 # To be used in GHA with e2e setup.
 
-data_dir  = "/opt/nomad/data"
-bind_addr = "0.0.0.0"
+data_dir   = "/opt/nomad/data"
+bind_addr  = "0.0.0.0"
 plugin_dir = "/tmp/plugins"
 
 server {
