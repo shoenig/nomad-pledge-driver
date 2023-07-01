@@ -222,7 +222,7 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		Env:    config.Env,
 		Dir:    config.TaskDir().Dir,
 		User:   config.User,
-		Cgroup: fmt.Sprintf("/sys/fs/cgroup/nomad.slice/%s.%s.scope", config.AllocID, config.Name),
+		Cgroup: p.cgroup(config.AllocID, config.Name),
 	}
 
 	opts, err := parseOptions(config)
@@ -280,12 +280,24 @@ func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
 		return fmt.Errorf("failed to decode task state: %w", err)
 	}
 
-	var taskConfig TaskConfig
-	if err := taskState.TaskConfig.DecodeDriverConfig(&taskConfig); err != nil {
-		return fmt.Errorf("failed to decode task config: %w", err)
+	taskState.TaskConfig = handle.Config.Copy()
+	stdout, stderr, err := open(handle.Config.StdoutPath, handle.Config.StderrPath)
+	if err != nil {
+		p.logger.Error("failed to re-open log files", "error", err)
+		return fmt.Errorf("failed to open log file(s): %w", err)
 	}
 
-	runner := pledge.Recover(taskState.PID)
+	// re-create the environment for pledge
+	env := &pledge.Environment{
+		Out:    stdout,
+		Err:    stderr,
+		Env:    handle.Config.Env,
+		Dir:    handle.Config.TaskDir().Dir,
+		User:   handle.Config.User,
+		Cgroup: p.cgroup(handle.Config.AllocID, handle.Config.Name),
+	}
+
+	runner := pledge.Recover(taskState.PID, env)
 	recHandle := task.RecreateHandle(runner, taskState.TaskConfig, taskState.StartedAt)
 	p.tasks.Set(taskState.TaskConfig.ID, recHandle)
 	return nil
@@ -438,4 +450,8 @@ func (p *PledgeDriver) ExecTask(taskID string, cmd []string, timeout time.Durati
 
 	// todo
 	return nil, fmt.Errorf("ExecTask not implemented")
+}
+
+func (*PledgeDriver) cgroup(allocID, task string) string {
+	return fmt.Sprintf("/sys/fs/cgroup/nomad.slice/%s.%s.scope", allocID, task)
 }
