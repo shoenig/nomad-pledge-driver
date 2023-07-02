@@ -27,7 +27,6 @@ More complex examples in the [hack](hack) directory.
 
 ```hcl
 job "curl" {
-  datacenters = ["dc1"]
   type        = "batch"
 
   group "group" {
