@@ -37,7 +37,7 @@ job "curl" {
         command  = "curl"
         args     = ["example.com"]
         promises = "stdio rpath inet dns sendfd"
-        unveil     = ["r:${NOMAD_TASK_DIR}"]
+        unveil   = ["r:${NOMAD_TASK_DIR}"]
       }
     }
   }
