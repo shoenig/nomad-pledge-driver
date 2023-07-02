@@ -15,6 +15,10 @@
 vendor/
 output/
 
+# Output of go-releaser
+dist/
+
+# Golang workspace
 go.work
 go.work.sum
 
