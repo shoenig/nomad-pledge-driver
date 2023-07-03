@@ -14,6 +14,8 @@ import (
 	"github.com/shoenig/test/must"
 )
 
+const timeout = 30 * time.Second
+
 func pause() {
 	if ci := os.Getenv("CI"); ci == "" {
 		time.Sleep(500 * time.Millisecond)
@@ -22,7 +24,7 @@ func pause() {
 }
 
 func setup(t *testing.T) context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	t.Cleanup(func() {
 		run(t, ctx, "nomad", "system", "gc")
 		cancel()
@@ -151,6 +153,8 @@ func TestBasic_Cgroup(t *testing.T) {
 	ctx := setup(t)
 
 	_ = run(t, ctx, "nomad", "job", "run", "../hack/cgroup.hcl")
+	// make sure job is complete
+	time.Sleep(5 * time.Second)
 	statusOutput := run(t, ctx, "nomad", "job", "status", "cgroup")
 
 	alloc := allocFromJobStatus(t, statusOutput)
@@ -158,4 +162,33 @@ func TestBasic_Cgroup(t *testing.T) {
 
 	logs := run(t, ctx, "nomad", "alloc", "logs", alloc)
 	must.RegexMatch(t, cgroupRe, logs)
+}
+
+func TestBasic_Bridge(t *testing.T) {
+	ctx := setup(t)
+
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/bridge.hcl")
+
+	serviceInfo := run(t, ctx, "nomad", "service", "info", "pybridge")
+	addressRe := regexp.MustCompile(`([\d]+\.[\d]+.[\d]+\.[\d]+:[\d]+)`)
+
+	m := addressRe.FindStringSubmatch(serviceInfo)
+	must.SliceLen(t, 2, m, must.Sprint("expected to find address"))
+	address := m[1]
+
+	// curl service address
+	curlOutput := run(t, ctx, "curl", "-s", address)
+	must.StrContains(t, curlOutput, "<title>bridge mode</title>")
+
+	// stop the service job
+	_ = run(t, ctx, "nomad", "job", "stop", "-purge", "bridge")
+}
+
+func TestBasic_PIDNS(t *testing.T) {
+	ctx := setup(t)
+
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/ps.hcl")
+	logs := run(t, ctx, "nomad", "logs", "-job", "ps")
+	lines := strings.Split(logs, "\n") // header and ps
+	must.SliceLen(t, 2, lines, must.Sprintf("expected 2 lines, got %q", logs))
 }
