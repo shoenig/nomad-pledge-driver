@@ -1,7 +1,4 @@
 job "ignore" {
-  datacenters = ["dc1"]
-  type        = "service"
-
   group "group" {
     task "ignore" {
       driver       = "pledge"
@@ -34,7 +31,7 @@ EOH
     }
 
     update {
-      min_healthy_time = "1s"
+      min_healthy_time = "2s"
     }
   }
 }

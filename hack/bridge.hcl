@@ -1,14 +1,5 @@
 job "bridge" {
   group "group" {
-    restart {
-      attempts = 0
-      mode     = "fail"
-    }
-
-    update {
-      min_healthy_time = "2s"
-    }
-
     network {
       mode = "bridge"
       port "http" { to = 8181 }
@@ -16,14 +7,14 @@ job "bridge" {
 
     service {
       provider = "nomad"
-      name = "pybridge"
-      port = "http"
+      name     = "pybridge"
+      port     = "http"
       check {
-        name = "up"
-        type = "http"
-        path = "/index.html"
+        name     = "up"
+        type     = "http"
+        path     = "/index.html"
         interval = "6s"
-        timeout = "1s"
+        timeout  = "1s"
       }
     }
 
@@ -37,7 +28,6 @@ job "bridge" {
         unveil   = ["r:/etc/mime.types", "r:${NOMAD_TASK_DIR}"]
       }
 
-
       template {
         destination = "local/index.html"
         data        = <<EOH
@@ -48,6 +38,15 @@ job "bridge" {
 </html>
 EOH
       }
+    }
+
+    restart {
+      attempts = 0
+      mode     = "fail"
+    }
+
+    update {
+      min_healthy_time = "2s"
     }
   }
 }

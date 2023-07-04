@@ -1,10 +1,10 @@
 job "passwd" {
-  datacenters = ["dc1"]
-  type        = "sysbatch"
+  type = "sysbatch"
 
   group "group" {
     task "cat" {
       driver = "pledge"
+      user   = "root"
       config {
         command  = "cat"
         args     = ["/etc/passwd"]

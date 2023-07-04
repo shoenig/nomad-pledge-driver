@@ -1,6 +1,5 @@
 job "env" {
-  datacenters = ["dc1"]
-  type        = "sysbatch"
+  type = "batch"
 
   group "group" {
     task "env" {

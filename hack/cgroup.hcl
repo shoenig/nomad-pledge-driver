@@ -1,5 +1,5 @@
 job "cgroup" {
-  type = "sysbatch"
+  type = "batch"
 
   group "group" {
     task "cat" {
