@@ -145,6 +145,28 @@ func (p *PledgeDriver) doFingerprint() *drivers.Fingerprint {
 		return failure(drivers.HealthStateHealthy, "kernel landlock not enabled")
 	}
 
+	// inspect unshare binary
+	uPath, uErr := exec.LookPath("unshare")
+	switch {
+	case os.IsNotExist(uErr):
+		return failure(drivers.HealthStateUndetected, "unshare executable not found")
+	case uErr != nil:
+		return failure(drivers.HealthStateUnhealthy, "failed to find unshare executable")
+	case uPath == "":
+		return failure(drivers.HealthStateUndetected, "unshare executable does not exist")
+	}
+
+	// inspect nsenter binary
+	nPath, nErr := exec.LookPath("nsenter")
+	switch {
+	case os.IsNotExist(nErr):
+		return failure(drivers.HealthStateUndetected, "nsenter executable not found")
+	case nErr != nil:
+		return failure(drivers.HealthStateUnhealthy, "failed to find nsenter executable")
+	case nPath == "":
+		return failure(drivers.HealthStateUndetected, "nsenter executable does not exist")
+	}
+
 	// inspect cap_net_bind_service configuration
 	// e.g. sudo setcap cap_net_bind_service+eip /opt/bin/pledge-1.8.com
 	netCap := p.getcap("cap_net_bind_service")
