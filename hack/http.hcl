@@ -1,11 +1,8 @@
 job "http" {
-  datacenters = ["dc1"]
-  type        = "service"
-
   group "group" {
     network {
       mode = "host"
-      port "http" { static = "8181" }
+      port "http" { static = 8181 }
     }
 
     task "task" {
@@ -37,7 +34,7 @@ EOH
     }
 
     update {
-      min_healthy_time = "1s"
+      min_healthy_time = "2s"
     }
   }
 }
