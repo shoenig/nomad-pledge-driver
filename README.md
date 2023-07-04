@@ -17,8 +17,9 @@ Use with caution.
 
 - Sandbox applications by **restricting syscalls** they are able to make (via _promises_)
 - Sandbox applications by **allow-listing filepaths** they are allowed to access (via _unveil_)
-- Sandbox applications by **isolating processes** using modern Linux cgroups (via _cgroups v2_)
-
+- Sandbox applications by **restricting resources** using modern Linux cgroups (via _cgroups v2_)
+- Sandbox applications by **namespace isolation** using Linux namespaces (via _nsenter_ and _unshare_)
+  
 ### Examples
 
 The example below uses `curl` to fetch `example.com`, with the minimal set of promises to make a request.
@@ -90,7 +91,7 @@ plugin "pledge" {
 }
 ```
 
-Note: in these examples the driver plugin is named `pledge`, and the utility executable is named `pledge-1.6.com`. 
+Note: in these examples the driver plugin is named `pledge`, and the utility executable is named `pledge-1.8.com`. 
 
 ### Task Configuration
 
@@ -109,7 +110,9 @@ If no `user` is specified for the task, the pledge plugin will use the `nobody` 
 - `importance`: One of `lowest`, `low`, `normal`, `high`, `highest` (default is `normal`)
 
 ```hcl
-# see hack/http.nomad for complete python http.server example
+# see hack/http.hcl for complete python http.server example
+# note that bridge mode also works, see hack/bridge.hcl
+
 task "task" {
   driver = "pledge"
   user   = "nobody"
