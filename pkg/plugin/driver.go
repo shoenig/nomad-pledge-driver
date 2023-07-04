@@ -195,6 +195,19 @@ func open(stdout, stderr string) (io.WriteCloser, io.WriteCloser, error) {
 	return a, b, nil
 }
 
+func netns(c *drivers.TaskConfig) string {
+	switch {
+	case c == nil:
+		return ""
+	case c.NetworkIsolation == nil:
+		return ""
+	case c.NetworkIsolation.Mode == drivers.NetIsolationModeGroup:
+		return c.NetworkIsolation.Path
+	default:
+		return ""
+	}
+}
+
 func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandle, *drivers.DriverNetwork, error) {
 	if config.User == "" {
 		config.User = "nobody"
@@ -223,6 +236,7 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		Dir:    config.TaskDir().Dir,
 		User:   config.User,
 		Cgroup: p.cgroup(config.AllocID, config.Name),
+		Net:    netns(config),
 	}
 
 	opts, err := parseOptions(config)

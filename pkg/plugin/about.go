@@ -46,10 +46,14 @@ var capabilities = &drivers.Capabilities{
 	SendSignals:         true,
 	Exec:                false,
 	FSIsolation:         drivers.FSIsolationNone,
-	NetIsolationModes:   []drivers.NetIsolationMode{drivers.NetIsolationModeNone},
 	MustInitiateNetwork: false,
 	MountConfigs:        drivers.MountConfigSupportAll,
 	RemoteTasks:         false,
+	NetIsolationModes: []drivers.NetIsolationMode{
+		drivers.NetIsolationModeNone,
+		drivers.NetIsolationModeHost,
+		drivers.NetIsolationModeGroup,
+	},
 }
 
 // Config represents the pledge-driver plugin configuration that gets set in the

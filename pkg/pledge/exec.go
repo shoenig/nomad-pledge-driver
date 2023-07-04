@@ -24,12 +24,13 @@ import (
 type Ctx = context.Context
 
 type Environment struct {
-	User   string
-	Out    io.WriteCloser
-	Err    io.WriteCloser
-	Env    map[string]string
-	Dir    string
-	Cgroup string
+	User   string            // user the command will run as
+	Out    io.WriteCloser    // stdout handle
+	Err    io.WriteCloser    // stderr handle
+	Env    map[string]string // environment variables
+	Dir    string            // task directory
+	Cgroup string            // task cgroup path
+	Net    string            // allocation network namespace path
 }
 
 func (o *Options) String() string {
@@ -182,9 +183,35 @@ func flatten(user, home string, env map[string]string) []string {
 	return result
 }
 
-func (e *exe) parameters() []string {
-	// start with the pledge executable
+func (e *exe) parameters(uid, gid uint32) []string {
 	var result []string
+
+	// start with nsenter if using bridge mode
+	if net := e.env.Net; net != "" {
+		result = append(
+			result,
+			"nsenter",
+			"--no-fork",
+			fmt.Sprintf("--net=%s", net),
+			"--",
+		)
+	}
+
+	// setup unshare for ipc, pid namespaces
+	result = append(result,
+		"unshare",
+		"--ipc",
+		"--pid",
+		"--mount-proc",
+		"--fork",
+		"--kill-child=SIGKILL",
+		"--setuid", strconv.Itoa(int(uid)),
+		"--setgid", strconv.Itoa(int(gid)),
+		"--",
+	)
+
+	// setup pledge invocation
+	result = append(result, e.bin)
 
 	// append the list of pledges
 	if e.opts.Promises != "" {
@@ -195,6 +222,9 @@ func (e *exe) parameters() []string {
 	for _, u := range e.opts.Unveil {
 		result = append(result, "-v", u)
 	}
+
+	// separate user command and args
+	result = append(result, "--")
 
 	// append the user command
 	result = append(result, e.opts.Command)
@@ -233,24 +263,14 @@ func (e *exe) Start(ctx Ctx) error {
 		return fmt.Errorf("failed to prestart command: %w", err)
 	}
 
+	// find our cgroup descriptor
 	fd, cleanup, err := e.openCG()
 	if err != nil {
 		return fmt.Errorf("failed to open cgroup for descriptor")
 	}
 
-	params := e.parameters()
-	cmd := exec.CommandContext(ctx, e.bin, params...)
-	cmd.Stdout = e.env.Out
-	cmd.Stderr = e.env.Err
-	cmd.Env = flatten(e.env.User, home, e.env.Env)
-	cmd.Dir = e.env.Dir
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		UseCgroupFD: true, // clone directly into cgroup
-		CgroupFD:    fd,   // cgroup file descriptor
-		Setpgid:     true, // ignore signals sent to nomad
-		Credential:  &syscall.Credential{Uid: uid, Gid: gid},
-	}
-
+	// a sandbox using nsenter, unshare, pledge, and our cgroup
+	cmd := e.isolation(ctx, home, fd, uid, gid)
 	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
@@ -262,13 +282,27 @@ func (e *exe) Start(ctx Ctx) error {
 	e.waiter = process.WaitOnChild(cmd.Process)
 	e.signal = process.Interrupts(cmd.Process.Pid)
 
-	// Ideally we would fork a trusted helper, enter the cgroup ourselves, then
-	// exec into the user subprocess. This is fine for now.
-	return e.isolate()
+	// set nice value
+	return e.nice()
 }
 
-// isolate this process to the cgroup for this task
-func (e *exe) isolate() error {
+func (e *exe) isolation(ctx Ctx, home string, fd int, uid, gid uint32) *exec.Cmd {
+	params := e.parameters(uid, gid)
+	cmd := exec.CommandContext(ctx, params[0], params[1:]...)
+	cmd.Stdout = e.env.Out
+	cmd.Stderr = e.env.Err
+	cmd.Env = flatten(e.env.User, home, e.env.Env)
+	cmd.Dir = e.env.Dir
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		UseCgroupFD: true, // clone directly into cgroup
+		CgroupFD:    fd,   // cgroup file descriptor
+		Setpgid:     true, // ignore signals sent to nomad
+	}
+	return cmd
+}
+
+// nice this process to the cgroup for this task
+func (e *exe) nice() error {
 	err := e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
 	return err
 }
