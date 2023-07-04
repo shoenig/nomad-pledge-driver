@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/nomad/plugins/shared/structs"
 	"github.com/shoenig/nomad-pledge/pkg/pledge"
 	"github.com/shoenig/nomad-pledge/pkg/task"
+	"github.com/shoenig/nomad-pledge/pkg/util"
 	"golang.org/x/sys/unix"
 	"oss.indeed.com/go/libtime"
 )
@@ -189,18 +190,27 @@ func failure(state drivers.HealthState, desc string) *drivers.Fingerprint {
 	}
 }
 
+const timeout = 3 * time.Second
+
 func (p *PledgeDriver) getcap(name string) bool {
-	cmd := exec.Command("getcap", p.config.PledgeExecutable)
+	ctx, cancel := util.Timeout(timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "getcap", p.config.PledgeExecutable)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return false
 	}
+
 	exp := fmt.Sprintf("%s=eip", name) // todo: robustness
 	return strings.Contains(string(out), exp)
 }
 
 func (p *PledgeDriver) detect(param string) bool {
-	cmd := exec.Command("/bin/sh", "-c", strings.Join([]string{p.config.PledgeExecutable, "-T", param}, " "))
+	ctx, cancel := util.Timeout(timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", strings.Join([]string{p.config.PledgeExecutable, "-T", param}, " "))
 	_ = cmd.Run() // just check the exit code, non-zero means undetected
 	return cmd.ProcessState.ExitCode() == 0
 }
