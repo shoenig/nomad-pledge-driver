@@ -160,4 +160,4 @@ There are example jobs in the [hack/](hack) directory.
 
 ### License
 
-The `noamd-pledge-driver` task driver plugin is made open source under the [MPL-2.0](LICENSE) license.
+The `pledge` task driver plugin is made open source under the [MPL-2.0](LICENSE) license.
