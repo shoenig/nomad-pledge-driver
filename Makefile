@@ -9,7 +9,7 @@ clean:
 .PHONY: dev
 dev: clean
 	@echo "==> Compile pledge plugin"
-	go build -race -tags=$(GOTAGS) -o /tmp/plugins/pledge
+	go build -race -tags=$(GOTAGS) -o /tmp/plugins/nomad-pledge-driver
 
 .PHONY: test
 test:

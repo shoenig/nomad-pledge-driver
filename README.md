@@ -84,7 +84,7 @@ the `cap_net_bind_service` capability has been set on the `pledge-1.x.com` execu
 Currently there is only one configuration option for this plugin, which is to specify the path of the `pledge` executable.
 
 ```hcl
-plugin "pledge" {
+plugin "nomad-pledge-driver" {
   config {
     pledge_executable = "/opt/bin/pledge-1.8.com"
   }
