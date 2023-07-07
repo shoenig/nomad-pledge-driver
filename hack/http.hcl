@@ -17,7 +17,7 @@ job "http" {
       }
 
       resources {
-        memory = 128
+        memory     = 128
         memory_max = 200
       }
 
