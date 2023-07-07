@@ -33,6 +33,7 @@ type Environment struct {
 	Net       string            // allocation network namespace path
 	Memory    uint64            // memory
 	MemoryMax uint64            // memory_max
+	Bandwidth uint64            // cpu / cores bandwidth (X/100_000)
 }
 
 func (o *Options) String() string {
@@ -309,8 +310,10 @@ func (e *exe) isolation(ctx Ctx, home string, fd int, uid, gid uint32) *exec.Cmd
 
 // set resource constraints via cgroups
 func (e *exe) constrain() error {
-	// set CPU priority niceness
-	_ = e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
+	// set cpu bandwidth
+	_ = e.writeCG("cpu.max", fmt.Sprintf("%d 100000", e.env.Bandwidth))
+
+	// will want to set burst one day, but in coordination with nomad
 
 	// set memory limits
 	switch e.env.MemoryMax {
@@ -320,6 +323,10 @@ func (e *exe) constrain() error {
 		_ = e.writeCG("memory.low", fmt.Sprintf("%d", e.env.Memory))
 		_ = e.writeCG("memory.max", fmt.Sprintf("%d", e.env.MemoryMax))
 	}
+
+	// set CPU priority niceness
+	_ = e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
+
 	return nil
 }
 
