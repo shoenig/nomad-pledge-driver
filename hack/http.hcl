@@ -16,6 +16,11 @@ job "http" {
         importance = "low"
       }
 
+      resources {
+        memory = 128
+        memory_max = 200
+      }
+
       template {
         destination = "local/index.html"
         data        = <<EOH
