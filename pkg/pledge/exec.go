@@ -24,13 +24,15 @@ import (
 type Ctx = context.Context
 
 type Environment struct {
-	User   string            // user the command will run as
-	Out    io.WriteCloser    // stdout handle
-	Err    io.WriteCloser    // stderr handle
-	Env    map[string]string // environment variables
-	Dir    string            // task directory
-	Cgroup string            // task cgroup path
-	Net    string            // allocation network namespace path
+	User      string            // user the command will run as
+	Out       io.WriteCloser    // stdout handle
+	Err       io.WriteCloser    // stderr handle
+	Env       map[string]string // environment variables
+	Dir       string            // task directory
+	Cgroup    string            // task cgroup path
+	Net       string            // allocation network namespace path
+	Memory    uint64            // memory
+	MemoryMax uint64            // memory_max
 }
 
 func (o *Options) String() string {
@@ -269,6 +271,11 @@ func (e *exe) Start(ctx Ctx) error {
 		return fmt.Errorf("failed to open cgroup for descriptor")
 	}
 
+	// set resource constraints
+	if err = e.constrain(); err != nil {
+		return fmt.Errorf("failed to write resource constraints to cgroup: %w", err)
+	}
+
 	// a sandbox using nsenter, unshare, pledge, and our cgroup
 	cmd := e.isolation(ctx, home, fd, uid, gid)
 	if err = cmd.Start(); err != nil {
@@ -282,8 +289,7 @@ func (e *exe) Start(ctx Ctx) error {
 	e.waiter = process.WaitOnChild(cmd.Process)
 	e.signal = process.Interrupts(cmd.Process.Pid)
 
-	// set nice value
-	return e.nice()
+	return nil
 }
 
 func (e *exe) isolation(ctx Ctx, home string, fd int, uid, gid uint32) *exec.Cmd {
@@ -301,10 +307,20 @@ func (e *exe) isolation(ctx Ctx, home string, fd int, uid, gid uint32) *exec.Cmd
 	return cmd
 }
 
-// nice this process to the cgroup for this task
-func (e *exe) nice() error {
-	err := e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
-	return err
+// set resource constraints via cgroups
+func (e *exe) constrain() error {
+	// set CPU priority niceness
+	_ = e.writeCG("cpu.weight.nice", strconv.Itoa(e.opts.Importance.Nice))
+
+	// set memory limits
+	switch e.env.MemoryMax {
+	case 0:
+		_ = e.writeCG("memory.max", fmt.Sprintf("%d", e.env.Memory))
+	default:
+		_ = e.writeCG("memory.low", fmt.Sprintf("%d", e.env.Memory))
+		_ = e.writeCG("memory.max", fmt.Sprintf("%d", e.env.MemoryMax))
+	}
+	return nil
 }
 
 func (e *exe) Wait() error {

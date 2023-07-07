@@ -1,5 +1,7 @@
 GOTAGS ?= osusergo
 
+default: dev
+
 .PHONY: clean
 clean:
 	@echo "==> Cleanup previous build"
@@ -33,4 +35,3 @@ release: clean
 	envy exec gh-release goreleaser release --clean
 	$(MAKE) clean
 
-default: dev

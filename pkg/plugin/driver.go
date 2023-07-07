@@ -260,15 +260,20 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		return nil, nil, fmt.Errorf("failed to open log file(s): %w", err)
 	}
 
+	memory := uint64(config.Resources.NomadResources.Memory.MemoryMB) * 1024 * 1024
+	memoryMax := uint64(config.Resources.NomadResources.Memory.MemoryMaxMB) * 1024 * 1024
+
 	// create the environment for pledge
 	env := &pledge.Environment{
-		Out:    stdout,
-		Err:    stderr,
-		Env:    config.Env,
-		Dir:    config.TaskDir().Dir,
-		User:   config.User,
-		Cgroup: p.cgroup(config.AllocID, config.Name),
-		Net:    netns(config),
+		Out:       stdout,
+		Err:       stderr,
+		Env:       config.Env,
+		Dir:       config.TaskDir().Dir,
+		User:      config.User,
+		Cgroup:    p.cgroup(config.AllocID, config.Name),
+		Net:       netns(config),
+		Memory:    memory,
+		MemoryMax: memoryMax,
 	}
 
 	opts, err := parseOptions(config)
