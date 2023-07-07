@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -191,4 +192,52 @@ func TestBasic_PIDNS(t *testing.T) {
 	logs := run(t, ctx, "nomad", "logs", "-job", "ps")
 	lines := strings.Split(logs, "\n") // header and ps
 	must.SliceLen(t, 2, lines, must.Sprintf("expected 2 lines, got %q", logs))
+}
+
+func TestBasic_Resources(t *testing.T) {
+	ctx := setup(t)
+
+	_ = run(t, ctx, "nomad", "job", "run", "../hack/resources.hcl")
+
+	// make sure job is complete
+	pause()
+
+	t.Run("memory.max", func(t *testing.T) {
+		logs := run(t, ctx, "nomad", "logs", "-job", "resources", "memory.max")
+		v, err := strconv.Atoi(strings.TrimSpace(logs))
+		must.NoError(t, err)
+		must.Eq(t, 209_715_200, v)
+	})
+
+	t.Run("memory.max.oversub", func(t *testing.T) {
+		logs := run(t, ctx, "nomad", "logs", "-job", "resources", "memory.max.oversub")
+		v, err := strconv.Atoi(strings.TrimSpace(logs))
+		must.NoError(t, err)
+		must.Eq(t, 262_144_000, v)
+	})
+
+	t.Run("memory.low.oversub", func(t *testing.T) {
+		logs := run(t, ctx, "nomad", "logs", "-job", "resources", "memory.low.oversub")
+		v, err := strconv.Atoi(strings.TrimSpace(logs))
+		must.NoError(t, err)
+		must.Eq(t, 157_286_400, v)
+	})
+
+	t.Run("cpu.max", func(t *testing.T) {
+		logs := run(t, ctx, "nomad", "logs", "-job", "resources", "cpu.max")
+		s := strings.Fields(logs)[0]
+		v, err := strconv.Atoi(s)
+		must.NoError(t, err)
+		// gave it cpu=1000 which is (proably) less than 1 core
+		must.Less(t, 100_000, v)
+	})
+
+	t.Run("cpu.max.cores", func(t *testing.T) {
+		logs := run(t, ctx, "nomad", "logs", "-job", "resources", "cpu.max.cores")
+		s := strings.Fields(logs)[0]
+		v, err := strconv.Atoi(s)
+		must.NoError(t, err)
+		// 1 core == 100000 bandwidth, but allow for int math errors
+		must.Between(t, 100_000, v, 101_000)
+	})
 }
