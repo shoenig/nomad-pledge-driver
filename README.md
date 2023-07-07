@@ -7,12 +7,6 @@
 
 *Security through SECCOMP sorcery*
 
-#### :warning: Experimental :warning:
-
-This task driver is experimental. It might work, it might crash, or it might do nothing at all.
-Changes to the driver implementation and how it is configured should be expected.
-Use with caution.
-
 ### Features
 
 - Sandbox applications by **restricting syscalls** they are able to make (via _promises_)
