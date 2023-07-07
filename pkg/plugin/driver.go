@@ -330,7 +330,7 @@ func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
 		return errors.New("failed to recover task, handle is nil")
 	}
 
-	p.logger.Warn("recovering task", "id", handle.Config.ID)
+	p.logger.Info("recovering task", "id", handle.Config.ID)
 
 	if _, exists := p.tasks.Get(handle.Config.ID); exists {
 		return nil // nothing to do
@@ -342,16 +342,11 @@ func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
 	}
 
 	taskState.TaskConfig = handle.Config.Copy()
-	stdout, stderr, err := open(handle.Config.StdoutPath, handle.Config.StderrPath)
-	if err != nil {
-		p.logger.Error("failed to re-open log files", "error", err)
-		return fmt.Errorf("failed to open log file(s): %w", err)
-	}
 
 	// re-create the environment for pledge
 	env := &pledge.Environment{
-		Out:    stdout,
-		Err:    stderr,
+		Out:    util.NullCloser(nil),
+		Err:    util.NullCloser(nil),
 		Env:    handle.Config.Env,
 		Dir:    handle.Config.TaskDir().Dir,
 		User:   handle.Config.User,
@@ -377,9 +372,7 @@ func (p *PledgeDriver) WaitTask(ctx context.Context, taskID string) (<-chan *dri
 	ch := make(chan *drivers.ExitResult)
 	go func() {
 		// todo: able to cancel ?
-		p.logger.Debug("WaitTask start Block")
 		handle.Block()
-		p.logger.Debug("WaitTask done Block")
 		result := handle.Status()
 		ch <- result.ExitResult
 	}()

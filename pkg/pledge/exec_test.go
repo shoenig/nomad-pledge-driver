@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/user"
 	"testing"
 
 	"github.com/shoenig/nomad-pledge/pkg/resources"
+	"github.com/shoenig/nomad-pledge/pkg/util"
 	"github.com/shoenig/test/must"
 )
 
@@ -25,18 +25,6 @@ func lookupBin() string {
 	return defaultPledgeBin
 }
 
-type writeCloser struct {
-	io.Writer
-}
-
-func (wc *writeCloser) Close() error {
-	return nil
-}
-
-func noopCloser(w io.Writer) io.WriteCloser {
-	return &writeCloser{w}
-}
-
 func whoami() string {
 	u, err := user.Current()
 	if err != nil {
@@ -50,8 +38,8 @@ func testEnv() (*Environment, *bytes.Buffer, *bytes.Buffer) {
 	var err bytes.Buffer
 
 	return &Environment{
-		Out:    noopCloser(&out),
-		Err:    noopCloser(&err),
+		Out:    util.NullCloser(&out),
+		Err:    util.NullCloser(&err),
 		Env:    map[string]string{},
 		Dir:    ".",
 		User:   whoami(),
