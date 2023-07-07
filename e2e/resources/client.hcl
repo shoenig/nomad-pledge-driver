@@ -15,7 +15,7 @@ client {
 }
 
 
-plugin "pledge" {
+plugin "nomad-pledge-driver" {
   config {
     pledge_executable = "/opt/bin/pledge-1.8.com"
   }
