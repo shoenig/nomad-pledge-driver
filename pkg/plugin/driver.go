@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/nomad/plugins/shared/hclspec"
 	"github.com/hashicorp/nomad/plugins/shared/structs"
 	"github.com/shoenig/nomad-pledge/pkg/pledge"
+	"github.com/shoenig/nomad-pledge/pkg/resources"
 	"github.com/shoenig/nomad-pledge/pkg/task"
 	"github.com/shoenig/nomad-pledge/pkg/util"
 	"golang.org/x/sys/unix"
@@ -263,6 +264,14 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 	memory := uint64(config.Resources.NomadResources.Memory.MemoryMB) * 1024 * 1024
 	memoryMax := uint64(config.Resources.NomadResources.Memory.MemoryMaxMB) * 1024 * 1024
 
+	bandwidth, err := resources.Bandwidth(uint64(config.Resources.NomadResources.Cpu.CpuShares))
+	if err != nil {
+		p.logger.Error("failed to compute cpu bandwidth: %w", err)
+		return nil, nil, fmt.Errorf("failed to compute cpu bandwidth: %w", err)
+	}
+
+	p.logger.Trace("resources", "memory", memory, "memory_max", memoryMax, "bandwidth", bandwidth)
+
 	// create the environment for pledge
 	env := &pledge.Environment{
 		Out:       stdout,
@@ -274,6 +283,7 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		Net:       netns(config),
 		Memory:    memory,
 		MemoryMax: memoryMax,
+		Bandwidth: bandwidth,
 	}
 
 	opts, err := parseOptions(config)
