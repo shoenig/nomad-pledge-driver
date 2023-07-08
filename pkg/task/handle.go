@@ -40,11 +40,13 @@ func NewHandle(runner pledge.Exec, config *drivers.TaskConfig) (*Handle, time.Ti
 }
 
 func RecreateHandle(runner pledge.Exec, config *drivers.TaskConfig, started time.Time) *Handle {
+	clock := libtime.SystemClock()
 	return &Handle{
 		pid:     runner.PID(),
 		runner:  runner,
 		config:  config,
 		state:   drivers.TaskStateUnknown,
+		clock:   clock,
 		started: started,
 		result:  new(drivers.ExitResult),
 	}
