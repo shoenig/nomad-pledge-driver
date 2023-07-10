@@ -31,6 +31,8 @@ jobs:
           curl -L -o /opt/bin/${PLEDGE_VERSION} https://github.com/shoenig/nomad-pledge-driver/releases/download/${PLEDGE_VERSION}/${PLEDGE_VERSION}
           chmod +x /opt/bin/${PLEDGE_VERSION}
           sudo cp e2e/resources/client.hcl /etc/nomad.d/nomad.hcl
+          sudo mkdir /opt/nomad/data
+          sudo chmod 0700 /opt/nomad/data
       - name: Start Nomad
         run: |
           cat /etc/nomad.d/nomad.hcl
