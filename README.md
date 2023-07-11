@@ -13,6 +13,16 @@
 - Sandbox applications by **allow-listing filepaths** they are allowed to access (via _unveil_)
 - Sandbox applications by **restricting resources** using modern Linux cgroups (via _cgroups v2_)
 - Sandbox applications by **namespace isolation** using Linux namespaces (via _nsenter_ and _unshare_)
+
+### Use cases
+
+The `nomad-pledge-driver` is intended as a replacement for `raw_exec`. Sometimes
+there are those management tasks that just need to run as `root` and directly
+access the filesystem or perform privileged operations. While `raw_exec`
+provides no isolation, the `pledge` driver uses Landlock to restrict the files
+or directories the task is allowed to access. Specific groups of system calls
+are allow-listed, greatly  reducing the attack surface of a mis- configured or
+compromised task.
   
 ### Examples
 
@@ -27,7 +37,6 @@ job "curl" {
   group "group" {
     task "curl" {
       driver = "pledge"
-      user   = "nobody"
       config {
         command  = "curl"
         args     = ["example.com"]
@@ -95,7 +104,9 @@ Tasks also need to **unveil** the filesystem paths needed to run.
 
 For more information about which pledges are available and how this mechanism works, visit https://justine.lol/pledge/
 
-If no `user` is specified for the task, the pledge plugin will use the `nobody` user by default.
+If no `user` is specified for the task, the pledge plugin will use the user of
+the Nomad client by default. Like the `raw_exec` task driver, `user` cannot be
+set in hardened clusters according to the [production guide](https://developer.hashicorp.com/nomad/docs/install/production/requirements#user-permissions).
 
 - `command`: The executable to run
 - `args`: The arguments to pass to executable

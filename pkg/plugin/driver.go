@@ -47,6 +47,9 @@ type PledgeDriver struct {
 	// cancel is used to shutdown the plugin and its subsystems
 	cancel context.CancelFunc
 
+	// users looks up system users
+	users util.Users
+
 	// logger will log to the Nomad agent
 	logger hclog.Logger
 }
@@ -60,6 +63,7 @@ func New(log hclog.Logger) drivers.DriverPlugin {
 		events: eventer.NewEventer(ctx, logger),
 		config: new(Config),
 		tasks:  task.NewStore(),
+		users:  util.NewUsers(),
 		logger: logger,
 	}
 }
@@ -243,8 +247,13 @@ func netns(c *drivers.TaskConfig) string {
 
 func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandle, *drivers.DriverNetwork, error) {
 	if config.User == "" {
-		config.User = "nobody"
-		p.logger.Debug("no user set so using default", "name", "nobody")
+		current, _, _, err := p.users.Current()
+		if err != nil {
+			p.logger.Error("failed to lookup current user", "error", err)
+			return nil, nil, err
+		}
+		config.User = current
+		p.logger.Trace("no user set so using default", "name", current)
 	}
 
 	if _, exists := p.tasks.Get(config.ID); exists {
