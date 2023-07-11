@@ -27,7 +27,6 @@ job "curl" {
   group "group" {
     task "curl" {
       driver = "pledge"
-      user   = "nobody"
       config {
         command  = "curl"
         args     = ["example.com"]
@@ -95,7 +94,9 @@ Tasks also need to **unveil** the filesystem paths needed to run.
 
 For more information about which pledges are available and how this mechanism works, visit https://justine.lol/pledge/
 
-If no `user` is specified for the task, the pledge plugin will use the `nobody` user by default.
+If no `user` is specified for the task, the pledge plugin will use the user of
+the Nomad client by default. Like the `raw_exec` task driver, `user` cannot be
+set in hardened clusters according to the [production guide](https://developer.hashicorp.com/nomad/docs/install/production/requirements#user-permissions).
 
 - `command`: The executable to run
 - `args`: The arguments to pass to executable
