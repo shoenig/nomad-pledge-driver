@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-set v0.1.13
 	github.com/hashicorp/nomad v1.5.6
-	github.com/shoenig/test v0.6.6
+	github.com/shoenig/test v0.6.7
 	golang.org/x/sys v0.9.0
 	oss.indeed.com/go/libtime v1.6.0
 )
