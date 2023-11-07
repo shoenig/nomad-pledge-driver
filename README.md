@@ -23,6 +23,11 @@ provides no isolation, the `pledge` driver uses Landlock to restrict the files
 or directories the task is allowed to access. Specific groups of system calls
 are allow-listed, greatly  reducing the attack surface of a mis- configured or
 compromised task.
+
+### Compatability
+
+- Use version 0.3 with Nomad 1.7 and higher
+- Use version 0.2 for Nomad 1.6 and below
   
 ### Examples
 

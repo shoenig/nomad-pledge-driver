@@ -7,7 +7,7 @@ job "resources" {
       driver = "pledge"
       config {
         command  = "/bin/cat"
-        args     = ["/sys/fs/cgroup/nomad.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/memory.max"]
+        args     = ["/sys/fs/cgroup/nomad.slice/share.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/memory.max"]
         promises = "stdio rpath"
         unveil   = ["r:/sys/fs/cgroup/nomad.slice"]
       }
@@ -21,7 +21,7 @@ job "resources" {
       driver = "pledge"
       config {
         command  = "/bin/cat"
-        args     = ["/sys/fs/cgroup/nomad.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/memory.max"]
+        args     = ["/sys/fs/cgroup/nomad.slice/share.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/memory.max"]
         promises = "stdio rpath"
         unveil   = ["r:/sys/fs/cgroup/nomad.slice"]
       }
@@ -36,7 +36,7 @@ job "resources" {
       driver = "pledge"
       config {
         command  = "/bin/cat"
-        args     = ["/sys/fs/cgroup/nomad.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/memory.low"]
+        args     = ["/sys/fs/cgroup/nomad.slice/share.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/memory.low"]
         promises = "stdio rpath"
         unveil   = ["r:/sys/fs/cgroup/nomad.slice"]
       }
@@ -51,7 +51,7 @@ job "resources" {
       driver = "pledge"
       config {
         command  = "/bin/cat"
-        args     = ["/sys/fs/cgroup/nomad.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/cpu.max"]
+        args     = ["/sys/fs/cgroup/nomad.slice/share.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/cpu.max"]
         promises = "stdio rpath"
         unveil   = ["r:/sys/fs/cgroup/nomad.slice"]
       }
@@ -64,7 +64,7 @@ job "resources" {
       driver = "pledge"
       config {
         command  = "/bin/cat"
-        args     = ["/sys/fs/cgroup/nomad.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/cpu.max"]
+        args     = ["/sys/fs/cgroup/nomad.slice/reserve.slice/${NOMAD_ALLOC_ID}.${NOMAD_TASK_NAME}.scope/cpu.max"]
         promises = "stdio rpath"
         unveil   = ["r:/sys/fs/cgroup/nomad.slice"]
       }
