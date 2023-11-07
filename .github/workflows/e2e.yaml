@@ -18,6 +18,12 @@ jobs:
           wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo dd of=/usr/share/keyrings/hashicorp-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo dd of=/etc/apt/sources.list.d/hashicorp.list
           sudo apt update && sudo apt install nomad
+
+          # temporarily get beta version and override the exe
+          cd /tmp
+          curl -o nomad.zip https://releases.hashicorp.com/nomad/1.7.0-beta.1/nomad_1.7.0-beta.1_linux_amd64.zip
+          unzip nomad.zip
+          sudo mv ./nomad /usr/bin/nomad
           nomad version
       - name: Install CNI
         run: |

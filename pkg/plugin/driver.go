@@ -279,7 +279,11 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		return nil, nil, fmt.Errorf("failed to compute cpu bandwidth: %w", err)
 	}
 
-	p.logger.Trace("resources", "memory", memory, "memory_max", memoryMax, "bandwidth", bandwidth)
+	cpuset := config.Resources.LinuxResources.CpusetCpus
+	p.logger.Trace("resources", "memory", memory, "memory_max", memoryMax, "compute", bandwidth, "cpuset", cpuset)
+
+	// with cgroups v2 this is just the task cgroup
+	cgroup := config.Resources.LinuxResources.CpusetCgroupPath
 
 	// create the environment for pledge
 	env := &pledge.Environment{
@@ -288,7 +292,7 @@ func (p *PledgeDriver) StartTask(config *drivers.TaskConfig) (*drivers.TaskHandl
 		Env:       config.Env,
 		Dir:       config.TaskDir().Dir,
 		User:      config.User,
-		Cgroup:    p.cgroup(config.AllocID, config.Name),
+		Cgroup:    cgroup,
 		Net:       netns(config),
 		Memory:    memory,
 		MemoryMax: memoryMax,
@@ -352,6 +356,9 @@ func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
 
 	taskState.TaskConfig = handle.Config.Copy()
 
+	// with cgroups v2 this is just the task cgroup
+	cgroup := taskState.TaskConfig.Resources.LinuxResources.CpusetCgroupPath
+
 	// re-create the environment for pledge
 	env := &pledge.Environment{
 		Out:    util.NullCloser(nil),
@@ -359,7 +366,7 @@ func (p *PledgeDriver) RecoverTask(handle *drivers.TaskHandle) error {
 		Env:    handle.Config.Env,
 		Dir:    handle.Config.TaskDir().Dir,
 		User:   handle.Config.User,
-		Cgroup: p.cgroup(handle.Config.AllocID, handle.Config.Name),
+		Cgroup: cgroup,
 	}
 
 	runner := pledge.Recover(taskState.PID, env)
@@ -513,8 +520,4 @@ func (p *PledgeDriver) ExecTask(taskID string, cmd []string, timeout time.Durati
 
 	// todo
 	return nil, fmt.Errorf("ExecTask not implemented")
-}
-
-func (*PledgeDriver) cgroup(allocID, task string) string {
-	return fmt.Sprintf("/sys/fs/cgroup/nomad.slice/%s.%s.scope", allocID, task)
 }
