@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/go-set"
+	"github.com/hashicorp/go-set/v2"
 	"github.com/shoenig/nomad-pledge/pkg/resources"
 	"github.com/shoenig/nomad-pledge/pkg/resources/process"
 	"golang.org/x/sys/unix"
