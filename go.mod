@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.3
 
 require (
-	github.com/hashicorp/go-hclog v1.5.0
+	github.com/hashicorp/go-hclog v1.6.2
 	github.com/hashicorp/go-set/v2 v2.1.0
 	github.com/hashicorp/nomad v1.6.3
 	github.com/shoenig/test v1.7.0
